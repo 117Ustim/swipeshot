@@ -294,7 +294,6 @@ export const SwipeCard = React.memo(function SwipeCard({
               source={{ uri: displayUri }} 
               style={styles.image}
               onError={() => {
-                console.log('[SwipeCard] Image load error for:', item.id, displayUri);
                 setImageLoadError(true);
               }}
             />

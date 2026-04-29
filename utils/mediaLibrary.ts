@@ -96,7 +96,7 @@ export async function getMediaItemFileSize(assetId: string): Promise<number> {
       return Math.round(pixels * 3);
     }
   } catch (error) {
-    console.log('[getMediaItemFileSize] Error:', error);
+    // Ошибка получения размера файла - возвращаем 0
     return 0;
   }
 }
