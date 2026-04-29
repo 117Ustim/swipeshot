@@ -1,0 +1,414 @@
+import * as MediaLibrary from 'expo-media-library';
+import { create } from 'zustand';
+
+import {
+    AppState,
+    AppTheme,
+    DeletionResult,
+    LanguageCode,
+    MediaItem,
+    MonthSession,
+    PersistedState,
+    ReviewMode,
+    SwipeActionKey,
+    SwipeActionVisibility,
+} from '@/types';
+import { logAppError } from '@/utils/errorLogger';
+import { addAssetToFavoritesAlbum } from '@/utils/favoritesAlbum';
+import { groupByMonth } from '@/utils/groupByMonth';
+import { fetchAllMediaItems } from '@/utils/mediaLibrary';
+import { clearOptimizedPreviewCache } from '@/utils/optimizedPreview';
+import { readPersistedStateFromDisk, writePersistedStateToDisk } from '@/utils/persistence';
+import { clearResolvedMediaUri } from '@/utils/resolveMediaUri';
+
+const PERSISTENCE_VERSION = 1;
+let didAttemptInitialPermissionRequest = false;
+const DEFAULT_LANGUAGE: LanguageCode = 'ru';
+const DEFAULT_REVIEW_MODE: ReviewMode = 'monthly';
+const DEFAULT_SWIPE_ACTION_VISIBILITY: SwipeActionVisibility = {
+  delete: true,
+  favorite: true,
+  keep: true,
+  skip: true,
+};
+
+function normalizeReviewMode(value: unknown): ReviewMode {
+  return value === 'yearly' ? 'yearly' : 'monthly';
+}
+
+function normalizeSwipeActionVisibility(value: unknown): SwipeActionVisibility {
+  const input = (value ?? {}) as Partial<SwipeActionVisibility>;
+
+  return {
+    delete: input.delete ?? DEFAULT_SWIPE_ACTION_VISIBILITY.delete,
+    favorite: input.favorite ?? DEFAULT_SWIPE_ACTION_VISIBILITY.favorite,
+    keep: input.keep ?? DEFAULT_SWIPE_ACTION_VISIBILITY.keep,
+    skip: input.skip ?? DEFAULT_SWIPE_ACTION_VISIBILITY.skip,
+  };
+}
+
+function mergeUniqueItems(items: MediaItem[], nextItem: MediaItem): MediaItem[] {
+  if (items.some((item) => item.id === nextItem.id)) {
+    return items;
+  }
+
+  return [...items, nextItem];
+}
+
+function mapIdsToMediaItems(ids: string[], months: MonthSession[]): MediaItem[] {
+  const mediaById = new Map<string, MediaItem>();
+
+  for (const month of months) {
+    for (const item of month.items) {
+      mediaById.set(item.id, item);
+    }
+  }
+
+  const uniqueIds = Array.from(new Set(ids));
+  return uniqueIds
+    .map((id) => mediaById.get(id))
+    .filter((item): item is MediaItem => Boolean(item));
+}
+
+function clampProgressByMonths(
+  progress: Record<string, number>,
+  months: MonthSession[]
+): Record<string, number> {
+  const result: Record<string, number> = {};
+
+  months.forEach((month) => {
+    const raw = progress[month.id];
+    if (raw === undefined) {
+      return;
+    }
+
+    // Разрешаем сохранять прогресс равный длине списка (т.е. просмотрено всё)
+    const maxIndex = month.items.length;
+    result[month.id] = Math.min(Math.max(raw, 0), maxIndex);
+  });
+
+  return result;
+}
+
+const EMPTY_DELETION_RESULT: DeletionResult = {
+  deletedCount: 0,
+  failedCount: 0,
+};
+
+export const usePhotoStore = create<AppState>((set, get) => ({
+  months: [],
+  isLoadingGallery: false,
+  galleryError: null,
+
+  currentMonthId: null,
+  currentIndex: 0,
+  monthProgress: {},
+
+  deletionQueue: [],
+  safeItems: [],
+  favorites: [],
+
+  language: DEFAULT_LANGUAGE,
+  reviewMode: DEFAULT_REVIEW_MODE,
+  swipeActionVisibility: DEFAULT_SWIPE_ACTION_VISIBILITY,
+  showSwipeButtons: true,
+  theme: 'dark',
+  activeSession: null,
+
+  hasMediaLibraryPermission: false,
+
+  loadGallery: async () => {
+    set({ isLoadingGallery: true, galleryError: null });
+
+    try {
+      const currentPermission = await MediaLibrary.getPermissionsAsync();
+      let granted = currentPermission.status === 'granted';
+
+      if (!granted && currentPermission.canAskAgain && !didAttemptInitialPermissionRequest) {
+        didAttemptInitialPermissionRequest = true;
+        const requestedPermission = await MediaLibrary.requestPermissionsAsync();
+        granted = requestedPermission.status === 'granted';
+      }
+
+      if (!granted) {
+        set({
+          isLoadingGallery: false,
+          galleryError: new Error('PERMISSION_DENIED'),
+          hasMediaLibraryPermission: false,
+          months: [],
+        });
+        return;
+      }
+
+      const items = await fetchAllMediaItems();
+      const grouped = groupByMonth(items);
+
+      set({
+        months: grouped,
+        isLoadingGallery: false,
+        galleryError: null,
+        hasMediaLibraryPermission: true,
+        activeSession: null,
+      });
+
+      await get().loadState();
+    } catch (error) {
+      void logAppError('store.loadGallery', error);
+      set({
+        isLoadingGallery: false,
+        galleryError: error as Error,
+      });
+    }
+  },
+  setCurrentMonth: (monthId: string) => {
+    const state = get();
+    const month = state.getSessionById(monthId);
+    const savedProgress = state.monthProgress[monthId] ?? 0;
+    
+    let safeIndex = 0;
+    if (month) {
+      if (savedProgress >= month.items.length) {
+        // Если пользователь уже посмотрел все фото (дошел до конца), начинаем с начала
+        safeIndex = 0;
+      } else {
+        const maxIndex = Math.max(month.items.length - 1, 0);
+        safeIndex = Math.min(Math.max(savedProgress, 0), maxIndex);
+      }
+    }
+    const isRealMonth = state.months.some((item) => item.id === monthId);
+
+    set({
+      currentMonthId: monthId,
+      currentIndex: safeIndex,
+      activeSession: isRealMonth ? null : state.activeSession,
+    });
+    void get().saveState();
+  },
+  setCurrentIndex: (index: number) => {
+    const safeIndex = Math.max(0, index);
+    set((state) => ({
+      currentIndex: safeIndex,
+      monthProgress: state.currentMonthId
+        ? { ...state.monthProgress, [state.currentMonthId]: safeIndex }
+        : state.monthProgress,
+    }));
+    void get().saveState();
+  },
+  addToDeletionQueue: (item: MediaItem) => {
+    set((state) => ({ deletionQueue: mergeUniqueItems(state.deletionQueue, item) }));
+    void get().saveState();
+  },
+  removeFromDeletionQueue: (itemId: string) => {
+    set((state) => ({ deletionQueue: state.deletionQueue.filter((item) => item.id !== itemId) }));
+    void get().saveState();
+  },
+  updateItemFileSize: (itemId: string, fileSize: number) => {
+    set((state) => ({
+      deletionQueue: state.deletionQueue.map((item) =>
+        item.id === itemId ? { ...item, fileSize } : item
+      ),
+    }));
+  },
+  addToSafe: (item: MediaItem) => {
+    set((state) => ({ safeItems: mergeUniqueItems(state.safeItems, item) }));
+    void get().saveState();
+  },
+  addToFavorites: (item: MediaItem) => {
+    const alreadyExists = get().favorites.some((favorite) => favorite.id === item.id);
+    set((state) => ({ favorites: mergeUniqueItems(state.favorites, item) }));
+
+    if (!alreadyExists) {
+      void addAssetToFavoritesAlbum(item.id).then((success) => {
+        if (!success) {
+          void logAppError('store.addToFavorites.addAssetToFavoritesAlbum', new Error('FAVORITES_ALBUM_SYNC_FAILED'), {
+            assetId: item.id,
+          });
+        }
+      });
+    }
+
+    void get().saveState();
+  },
+  confirmDeletion: async () => {
+    const state = get();
+    if (state.deletionQueue.length === 0) {
+      return EMPTY_DELETION_RESULT;
+    }
+
+    const allIds = state.deletionQueue.map((item) => item.id);
+    let deletedIds: string[] = [];
+    let failedIds: string[] = [];
+
+    try {
+      // Удаляем все файлы одним вызовом
+      const success = await MediaLibrary.deleteAssetsAsync(allIds);
+      
+      if (success) {
+        deletedIds = allIds;
+      } else {
+        failedIds = allIds;
+        void logAppError('store.confirmDeletion.deleteAssetsAsync', new Error('DELETE_ASSETS_RETURNED_FALSE'), {
+          assetIds: allIds,
+        });
+      }
+    } catch (error) {
+      failedIds = allIds;
+      void logAppError('store.confirmDeletion.deleteAssetsAsync', error, {
+        assetIds: allIds,
+      });
+    }
+
+    set((currentState) => {
+      const deletedSet = new Set(deletedIds);
+      const updatedMonths = currentState.months
+        .map((month) => {
+          const nextItems = month.items.filter((item) => !deletedSet.has(item.id));
+          if (nextItems.length === 0) {
+            return null;
+          }
+
+          return {
+            ...month,
+            items: nextItems,
+            totalCount: nextItems.length,
+            coverPhotoUri: nextItems[0].uri,
+            currentIndex: month.currentIndex >= month.totalCount ? nextItems.length : Math.min(month.currentIndex, Math.max(nextItems.length - 1, 0)),
+          };
+        })
+        .filter((month): month is MonthSession => Boolean(month));
+
+      const activeMonth = currentState.currentMonthId
+        ? updatedMonths.find((month) => month.id === currentState.currentMonthId) ?? null
+        : null;
+
+      return {
+        months: updatedMonths,
+        deletionQueue: [],
+        safeItems: currentState.safeItems.filter((item) => !deletedSet.has(item.id)),
+        favorites: currentState.favorites.filter((item) => !deletedSet.has(item.id)),
+        currentMonthId: activeMonth?.id ?? null,
+        currentIndex: activeMonth
+          ? (currentState.currentIndex >= (currentState.months.find(m => m.id === activeMonth.id)?.totalCount ?? 0)
+              ? activeMonth.items.length
+              : Math.min(currentState.currentIndex, Math.max(activeMonth.items.length - 1, 0)))
+          : 0,
+        monthProgress: clampProgressByMonths(currentState.monthProgress, updatedMonths),
+        activeSession: null,
+      };
+    });
+
+    await get().saveState();
+
+    deletedIds.forEach((assetId) => {
+      clearResolvedMediaUri(assetId);
+      clearOptimizedPreviewCache(assetId);
+    });
+
+    return {
+      deletedCount: deletedIds.length,
+      failedCount: failedIds.length,
+    };
+  },
+  setLanguage: (language: LanguageCode) => {
+    set({ language });
+    void get().saveState();
+  },
+  setReviewMode: (reviewMode: ReviewMode) => {
+    set({ reviewMode });
+    void get().saveState();
+  },
+  setSwipeActionVisibility: (action: SwipeActionKey, visible: boolean) => {
+    set((state) => ({
+      swipeActionVisibility: {
+        ...state.swipeActionVisibility,
+        [action]: visible,
+      },
+    }));
+    void get().saveState();
+  },
+  setShowSwipeButtons: (show: boolean) => {
+    set({ showSwipeButtons: show });
+    void get().saveState();
+  },
+  setTheme: (theme: AppTheme) => {
+    set({ theme });
+    void get().saveState();
+  },
+  setActiveSession: (session: MonthSession | null) => {
+    set({ activeSession: session });
+  },
+  getSessionById: (sessionId: string) => {
+    const state = get();
+    if (state.activeSession?.id === sessionId) {
+      return state.activeSession;
+    }
+
+    return state.months.find((item) => item.id === sessionId) ?? null;
+  },
+  saveState: async () => {
+    const state = get();
+    const payload: PersistedState = {
+      version: PERSISTENCE_VERSION,
+      deletionQueue: Array.from(new Set(state.deletionQueue.map((item) => item.id))),
+      safeItems: Array.from(new Set(state.safeItems.map((item) => item.id))),
+      favorites: Array.from(new Set(state.favorites.map((item) => item.id))),
+      monthProgress: clampProgressByMonths(state.monthProgress, state.months),
+      language: state.language,
+      reviewMode: state.reviewMode,
+      swipeActionVisibility: state.swipeActionVisibility,
+      showSwipeButtons: state.showSwipeButtons,
+      theme: state.theme,
+      lastSync: Date.now(),
+    };
+
+    await writePersistedStateToDisk(payload);
+  },
+  loadState: async () => {
+    const persisted = await readPersistedStateFromDisk();
+    if (!persisted || persisted.version !== PERSISTENCE_VERSION) {
+      return;
+    }
+
+    const state = get();
+    const restoredDeletionQueue = mapIdsToMediaItems(persisted.deletionQueue, state.months);
+    const restoredSafeItems = mapIdsToMediaItems(persisted.safeItems, state.months);
+    const restoredFavorites = mapIdsToMediaItems(persisted.favorites, state.months);
+
+    const restoredMonthProgress = clampProgressByMonths(persisted.monthProgress ?? {}, state.months);
+
+    let restoredMonthId = state.currentMonthId;
+    let restoredIndex = state.currentIndex;
+
+    if (!restoredMonthId) {
+      const [monthId] = Object.keys(restoredMonthProgress);
+      if (monthId) {
+        restoredMonthId = monthId;
+      }
+    }
+
+    if (restoredMonthId) {
+      const restoredMonth = state.getSessionById(restoredMonthId);
+      if (!restoredMonth) {
+        restoredMonthId = null;
+        restoredIndex = 0;
+      } else {
+        restoredIndex = restoredMonthProgress[restoredMonthId] ?? 0;
+      }
+    }
+
+    set({
+      deletionQueue: restoredDeletionQueue,
+      safeItems: restoredSafeItems,
+      favorites: restoredFavorites,
+      currentMonthId: restoredMonthId,
+      currentIndex: restoredIndex,
+      monthProgress: restoredMonthProgress,
+      language: persisted.language ?? DEFAULT_LANGUAGE,
+      reviewMode: normalizeReviewMode(persisted.reviewMode),
+      swipeActionVisibility: normalizeSwipeActionVisibility(persisted.swipeActionVisibility),
+      showSwipeButtons: persisted.showSwipeButtons ?? true,
+      theme: (persisted.theme as AppTheme) ?? 'dark',
+      activeSession: null,
+    });
+  },
+}));

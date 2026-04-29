@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SwipeShot Privacy Policy</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 30px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .lang-switcher {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .lang-btn {
+            padding: 10px 20px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .lang-btn:hover { background: #667eea; color: white; }
+        .lang-btn.active { background: #667eea; color: white; }
+        .content {
+            padding: 40px 30px;
+        }
+        .content h2 {
+            color: #667eea;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+        .content h3 {
+            color: #764ba2;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.3em;
+        }
+        .content p { margin-bottom: 15px; }
+        .content ul { margin-left: 20px; margin-bottom: 15px; }
+        .content li { margin-bottom: 8px; }
+        .highlight {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .summary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin: 30px 0;
+        }
+        .summary h3 { color: white; margin-bottom: 15px; }
+        .lang-content { display: none; }
+        .lang-content.active { display: block; }
+        @media (max-width: 600px) {
+            .header h1 { font-size: 2em; }
+            .content { padding: 20px; }
+            .lang-switcher { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔒 SwipeShot</h1>
+            <p>Privacy Policy / Политика конфіденційності / Политика конфиденциальности</p>
+        </div>
+        
+        <div class="lang-switcher">
+            <button class="lang-btn active" onclick="switchLang('en')">🇬🇧 English</button>
+            <button class="lang-btn" onclick="switchLang('ru')">Русский</button>
+            <button class="lang-btn" onclick="switchLang('uk')">🇺🇦 Українська</button>
+        </div>
+
+        <!-- English Version -->
+        <div id="lang-en" class="lang-content active">
+            <div class="content">
+                <p><strong>Effective Date:</strong> April 29, 2026<br>
+                <strong>Last Updated:</strong> April 29, 2026</p>
+
+                <h2>Introduction</h2>
+                <p>Welcome to SwipeShot!</p>
+                <p>SwipeShot is an app for quickly cleaning up your iPhone photo gallery. We take your privacy seriously and want you to understand how our app works with your data.</p>
+                
+                <div class="highlight">
+                    <strong>Key Point:</strong> SwipeShot works entirely locally on your device. We <strong>DO NOT collect</strong>, <strong>DO NOT store</strong>, and <strong>DO NOT transmit</strong> your photos, videos, or any other data to our servers or third parties.
+                </div>
+
+                <h2>What Data We Collect</h2>
+                
+                <h3>1. Photo Library Access (Photos and Videos)</h3>
+                <p><strong>What:</strong> SwipeShot requests access to your photo library to read photos and videos.</p>
+                <p><strong>Why:</strong> To show you your photos and videos for review and selection of which files to delete or save to favorites.</p>
+                <p><strong>How It's Stored:</strong> All data remains <strong>only on your device</strong>. We do not upload, copy, or send your photos/videos anywhere.</p>
+                <p><strong>Permission:</strong> You can revoke access at any time through iOS Settings → SwipeShot → Photos.</p>
+
+                <h3>2. Media File Metadata</h3>
+                <p><strong>What:</strong> Creation date, file size, resolution, video duration.</p>
+                <p><strong>Why:</strong> To group photos by month, identify large videos, and display file information.</p>
+                <p><strong>How It's Stored:</strong> Locally on your device, not transmitted anywhere.</p>
+
+                <h3>3. App Usage Progress</h3>
+                <p><strong>What:</strong> Which months you've reviewed, which files are in the deletion queue, which are in favorites.</p>
+                <p><strong>Why:</strong> To save your progress between sessions and not lose selected files when closing the app.</p>
+                <p><strong>How It's Stored:</strong> In a local JSON file on your device. Not synced to cloud, not sent to server.</p>
+
+                <h2>What We DO NOT Collect</h2>
+                <p>SwipeShot <strong>DOES NOT collect</strong>:</p>
+                <ul>
+                    <li>❌ Your name, email, phone number</li>
+                    <li>❌ Location data</li>
+                    <li>❌ Device information (model, UDID)</li>
+                    <li>❌ IP address</li>
+                    <li>❌ App usage analytics</li>
+                    <li>❌ Advertising identifiers</li>
+                    <li>❌ Any other personal data</li>
+                </ul>
+
+                <h2>How We Use Data</h2>
+                <p>SwipeShot uses data <strong>only for app functionality</strong>:</p>
+                <ol>
+                    <li><strong>Display Gallery</strong> — show your photos and videos</li>
+                    <li><strong>Group by Month</strong> — sort files by creation date</li>
+                    <li><strong>Delete Files</strong> — delete files you selected from photo library</li>
+                    <li><strong>Favorites</strong> — add selected files to system album "SwipeShot Favorites"</li>
+                    <li><strong>Save Progress</strong> — remember where you left off</li>
+                </ol>
+
+                <p><strong>We DO NOT use data for:</strong></p>
+                <ul>
+                    <li>❌ Advertising</li>
+                    <li>❌ Analytics</li>
+                    <li>❌ Selling to third parties</li>
+                    <li>❌ Machine learning</li>
+                    <li>❌ Any other purposes</li>
+                </ul>
+
+                <h2>Data Sharing with Third Parties</h2>
+                <p>SwipeShot <strong>DOES NOT share</strong> your data with third parties.</p>
+                <p>We have no:</p>
+                <ul>
+                    <li>❌ Servers for data storage</li>
+                    <li>❌ Analytics partners (Google Analytics, Firebase, etc.)</li>
+                    <li>❌ Ad networks</li>
+                    <li>❌ Cloud synchronization</li>
+                </ul>
+                <p>All data remains <strong>only on your iPhone</strong>.</p>
+
+                <h2>How We Protect Data</h2>
+                <h3>Local Storage</h3>
+                <p>All data is stored locally on your device in the protected app sandbox. Other apps cannot access this data.</p>
+                
+                <h3>Encryption</h3>
+                <p>iOS automatically encrypts app data when the device is locked.</p>
+                
+                <h3>Data Deletion</h3>
+                <p>When you delete SwipeShot, all app data is automatically deleted by iOS.</p>
+
+                <h2>Your Rights</h2>
+                <h3>Right to Access</h3>
+                <p>All your data is on your device. You can view it at any time in the app.</p>
+                
+                <h3>Right to Deletion</h3>
+                <p>You can delete all SwipeShot data:</p>
+                <ol>
+                    <li>Delete the app from your device</li>
+                    <li>iOS will automatically delete all app data</li>
+                </ol>
+                
+                <h3>Right to Revoke Permissions</h3>
+                <p>You can revoke photo library access:</p>
+                <ol>
+                    <li>Open iOS Settings</li>
+                    <li>Find SwipeShot</li>
+                    <li>Tap "Photos"</li>
+                    <li>Select "None" or "Selected Photos"</li>
+                </ol>
+
+                <h2>Children</h2>
+                <p>SwipeShot is not intended for children under 13. We do not knowingly collect data from children. If you are a parent and discover your child is using the app, please contact us.</p>
+
+                <h2>Changes to Privacy Policy</h2>
+                <p>We may update this privacy policy. For significant changes, we will notify you through:</p>
+                <ul>
+                    <li>Updating the "Last Updated" date at the top of this document</li>
+                    <li>In-app notification (if necessary)</li>
+                </ul>
+                <p>We recommend checking this page periodically for changes.</p>
+
+                <h2>Legal Compliance</h2>
+                <p>SwipeShot complies with:</p>
+                <ul>
+                    <li><strong>GDPR</strong> (General Data Protection Regulation, EU)</li>
+                    <li><strong>CCPA</strong> (California Consumer Privacy Act, USA)</li>
+                    <li><strong>App Store Review Guidelines</strong> (Apple)</li>
+                </ul>
+                <p>Since we do not collect personal data on servers, most requirements of these laws do not apply to us.</p>
+
+                <h2>Contact</h2>
+                <p>If you have questions about privacy or want to exercise your rights, contact us:</p>
+                <p><strong>Email:</strong>ustik72@gmail.com<br>
+                <strong>Developer:</strong>Ustim Antonenko</p>
+                <p>We will respond within 30 days.</p>
+
+                <div class="summary">
+                    <h3>Summary (TL;DR)</h3>
+                    <ul>
+                        <li>✅ SwipeShot works <strong>entirely locally</strong> on your iPhone</li>
+                        <li>✅ We <strong>DO NOT collect</strong> your photos, videos, or personal data</li>
+                        <li>✅ We <strong>DO NOT send</strong> data to servers</li>
+                        <li>✅ We <strong>DO NOT use</strong> analytics or advertising</li>
+                        <li>✅ All data <strong>remains on your device</strong></li>
+                        <li>✅ Deleting the app = deleting all data</li>
+                    </ul>
+                    <p style="margin-top: 20px;"><strong>Your privacy is our priority.</strong> 🔒</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Russian Version -->
+        <div id="lang-ru" class="lang-content">
+            <div class="content">
+                <p><strong>Дата вступления в силу:</strong> 29 апреля 2026<br>
+                <strong>Последнее обновление:</strong> 29 апреля 2026</p>
+
+                <h2>Введение</h2>
+                <p>Добро пожаловать в SwipeShot!</p>
+                
+                <div class="highlight">
+                    <strong>Главное:</strong> SwipeShot работает полностью локально на вашем устройстве. Мы <strong>НЕ собираем</strong>, <strong>НЕ храним</strong> и <strong>НЕ передаем</strong> ваши фото, видео или любые другие данные на наши серверы или третьим лицам.
+                </div>
+
+                <h2>Какие данные мы собираем</h2>
+                <h3>1. Доступ к медиатеке</h3>
+                <p>Для показа ваших фото и видео. Все данные остаются только на вашем устройстве.</p>
+                
+                <h3>2. Метаданные файлов</h3>
+                <p>Дата создания, размер, разрешение. Для группировки по месяцам.</p>
+                
+                <h3>3. Прогресс использования</h3>
+                <p>Сохраняется локально в JSON-файле на вашем устройстве.</p>
+
+                <h2>Что мы НЕ собираем</h2>
+                <ul>
+                    <li>❌ Имя, email, телефон</li>
+                    <li>❌ Местоположение</li>
+                    <li>❌ Информацию об устройстве</li>
+                    <li>❌ IP-адрес</li>
+                    <li>❌ Аналитику</li>
+                    <li>❌ Рекламные идентификаторы</li>
+                </ul>
+
+                <h2>Передача данных третьим лицам</h2>
+                <p>SwipeShot <strong>НЕ передает</strong> ваши данные третьим лицам. У нас нет серверов, аналитики, рекламы или облачной синхронизации.</p>
+
+                <h2>Ваши права</h2>
+                <p>Вы можете:</p>
+                <ul>
+                    <li>Просмотреть все данные в приложении</li>
+                    <li>Удалить все данные (удалив приложение)</li>
+                    <li>Отозвать разрешения в Настройках iOS</li>
+                </ul>
+
+                <h2>Контакты</h2>
+                <p><strong>Email:</strong>ustik72@gmail.com<br>
+                <strong>Разработчик:</strong>Ustim Antonenko</p>
+
+                <div class="summary">
+                    <h3>Резюме</h3>
+                    <ul>
+                        <li>✅ Работает полностью локально</li>
+                        <li>✅ НЕ собираем данные</li>
+                        <li>✅ НЕ отправляем на сервер</li>
+                        <li>✅ НЕ используем аналитику</li>
+                        <li>✅ Все данные на вашем устройстве</li>
+                    </ul>
+                    <p style="margin-top: 20px;"><strong>Ваша конфиденциальность — наш приоритет.</strong> 🔒</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ukrainian Version -->
+        <div id="lang-uk" class="lang-content">
+            <div class="content">
+                <p><strong>Дата набуття чинності:</strong> 29 квітня 2026<br>
+                <strong>Останнє оновлення:</strong> 29 квітня 2026</p>
+
+                <h2>Вступ</h2>
+                <p>Ласкаво просимо до SwipeShot!</p>
+                
+                <div class="highlight">
+                    <strong>Головне:</strong> SwipeShot працює повністю локально на вашому пристрої. Ми <strong>НЕ збираємо</strong>, <strong>НЕ зберігаємо</strong> і <strong>НЕ передаємо</strong> ваші фото, відео або будь-які інші дані на наші сервери або третім особам.
+                </div>
+
+                <h2>Які дані ми збираємо</h2>
+                <h3>1. Доступ до медіатеки</h3>
+                <p>Для показу ваших фото та відео. Всі дані залишаються тільки на вашому пристрої.</p>
+                
+                <h3>2. Метадані файлів</h3>
+                <p>Дата створення, розмір, роздільна здатність. Для групування по місяцях.</p>
+                
+                <h3>3. Прогрес використання</h3>
+                <p>Зберігається локально в JSON-файлі на вашому пристрої.</p>
+
+                <h2>Що ми НЕ збираємо</h2>
+                <ul>
+                    <li>❌ Ім'я, email, телефон</li>
+                    <li>❌ Місцезнаходження</li>
+                    <li>❌ Інформацію про пристрій</li>
+                    <li>❌ IP-адресу</li>
+                    <li>❌ Аналітику</li>
+                    <li>❌ Рекламні ідентифікатори</li>
+                </ul>
+
+                <h2>Передача даних третім особам</h2>
+                <p>SwipeShot <strong>НЕ передає</strong> ваші дані третім особам. У нас немає серверів, аналітики, реклами або хмарної синхронізації.</p>
+
+                <h2>Ваші права</h2>
+                <p>Ви можете:</p>
+                <ul>
+                    <li>Переглянути всі дані в додатку</li>
+                    <li>Видалити всі дані (видаливши додаток)</li>
+                    <li>Відкликати дозволи в Налаштуваннях iOS</li>
+                </ul>
+
+                <h2>Контакти</h2>
+                <p><strong>Email:</strong>ustik72@gmail.com<br>
+                <strong>Розробник:</strong>Ustim Antonenko</p>
+
+                <div class="summary">
+                    <h3>Резюме</h3>
+                    <ul>
+                        <li>✅ Працює повністю локально</li>
+                        <li>✅ НЕ збираємо дані</li>
+                        <li>✅ НЕ відправляємо на сервер</li>
+                        <li>✅ НЕ використовуємо аналітику</li>
+                        <li>✅ Всі дані на вашому пристрої</li>
+                    </ul>
+                    <p style="margin-top: 20px;"><strong>Ваша конфіденційність — наш пріоритет.</strong> 🔒</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchLang(lang) {
+            // Hide all language contents
+            document.querySelectorAll('.lang-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected language
+            document.getElementById('lang-' + lang).classList.add('active');
+            
+            // Highlight selected button
+            event.target.classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>

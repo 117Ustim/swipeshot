@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "swipeshot-WEEjtq",
-    "slug": "swipeshot-WEEjtq",
+    "name": "SwipeShot",
+    "slug": "swipeshot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "swipeshotweejtq",
+    "scheme": "swipeshot",
     "userInterfaceStyle": "automatic",
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -13,7 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "SwipeShot нужен доступ к вашей медиатеке, чтобы показывать и удалять выбранные фото и видео.",
+        "NSPhotoLibraryAddUsageDescription": "SwipeShot нужен доступ к медиатеке, чтобы сохранять избранные файлы."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -30,7 +34,8 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true

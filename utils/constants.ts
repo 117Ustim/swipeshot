@@ -1,0 +1,1 @@
+export const LARGE_VIDEO_THRESHOLD_BYTES = 50 * 1024 * 1024;
