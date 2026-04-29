@@ -6,6 +6,7 @@ node_modules/
 # Expo
 .expo/
 dist/
+dist-test/
 web-build/
 expo-env.d.ts
 
@@ -39,3 +40,15 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Kiro AI (internal development files)
+.kiro/
+_SESSION_STATE.md
+TEST_REPORT.md
+
+# Privacy Policy (keep only index.html for GitHub Pages)
+privacy-policy/*.md
+privacy-policy/CHECKLIST-*.md
+privacy-policy/DEPLOYMENT.md
+privacy-policy/HOW-TO-UPDATE-URL.md
+privacy-policy/README.md
