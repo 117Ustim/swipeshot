@@ -1,3 +1,2 @@
-// TODO: Замени этот URL на свой GitHub Pages URL после публикации
-// Пример: 'https://твой-username.github.io/swipeshot/privacy-policy/'
-export const PRIVACY_POLICY_URL = 'https://example.com/privacy-policy';
+// Privacy Policy URL для GitHub Pages
+export const PRIVACY_POLICY_URL = 'https://117ustim.github.io/swipeshot/';
