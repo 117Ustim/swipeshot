@@ -1,0 +1,5 @@
+/* Media library access for viewing and deleting */
+"NSPhotoLibraryUsageDescription" = "SwipeShot needs access to your media library to show and delete selected photos and videos.";
+
+/* Media library access for saving to favorites */
+"NSPhotoLibraryAddUsageDescription" = "SwipeShot needs access to your media library to save favorite files.";

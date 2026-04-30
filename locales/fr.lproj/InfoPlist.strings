@@ -1,0 +1,5 @@
+/* Accès à la médiathèque pour afficher et supprimer */
+"NSPhotoLibraryUsageDescription" = "SwipeShot a besoin d'accéder à votre médiathèque pour afficher et supprimer les photos et vidéos sélectionnées.";
+
+/* Accès à la médiathèque pour sauvegarder les favoris */
+"NSPhotoLibraryAddUsageDescription" = "SwipeShot a besoin d'accéder à votre médiathèque pour sauvegarder les fichiers favoris.";

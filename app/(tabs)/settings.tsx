@@ -92,6 +92,13 @@ export default function SettingsScreen() {
     return t('settings.reviewModeMonthly');
   }, [t]);
 
+  const getReviewModeHint = useCallback((mode: ReviewMode) => {
+    if (mode === 'yearly') {
+      return t('settings.reviewModeYearlyHint');
+    }
+    return t('settings.reviewModeMonthlyHint');
+  }, [t]);
+
   const getThemeLabel = useCallback((tTheme: AppTheme) => {
     switch (tTheme) {
       case 'light': return t('settings.themeLight');
@@ -114,13 +121,13 @@ export default function SettingsScreen() {
       undefined,
       [
         ...REVIEW_MODE_OPTIONS.map((option) => ({
-          text: `${option === reviewMode ? '✓ ' : ''}${getReviewModeLabel(option)}`,
+          text: `${option === reviewMode ? '✓ ' : ''}${getReviewModeLabel(option)} — ${getReviewModeHint(option)}`,
           onPress: () => handleSelectReviewMode(option),
         })),
         { text: t('common.cancel'), style: 'cancel' as const },
       ]
     );
-  }, [getReviewModeLabel, handleSelectReviewMode, reviewMode, t]);
+  }, [getReviewModeHint, getReviewModeLabel, handleSelectReviewMode, reviewMode, t]);
 
   const handleOpenThemePicker = useCallback(() => {
     Alert.alert(
@@ -167,6 +174,7 @@ export default function SettingsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('settings.reviewModeTitle')}</Text>
+          <Text style={styles.sectionSubtitle}>{t('settings.reviewModeSubtitle')}</Text>
           <Pressable onPress={handleOpenReviewModePicker} style={styles.languagePicker}>
             <Text style={styles.languageValue}>{getReviewModeLabel(reviewMode)}</Text>
             <Text style={styles.languageAction}>{t('settings.chooseReviewMode')}</Text>
@@ -181,11 +189,13 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>{t('settings.swipeButtonsTitle')}</Text>
-          <View style={styles.privacyList}>
-            <View style={[styles.toggleRow, styles.toggleRowLast]}>
-              <Text style={styles.toggleLabel}>{t('settings.swipeButtonsTitle')}</Text>
+        <View style={styles.cardCompact}>
+          <View style={styles.cardCompactInner}>
+            <View style={styles.cardCompactText}>
+              <Text style={styles.sectionTitle}>{t('settings.swipeButtonsTitle')}</Text>
+              <Text style={styles.sectionSubtitle}>{t('settings.swipeButtonsSubtitle')}</Text>
+            </View>
+            <View style={styles.switchWrapper}>
               <Switch
                 value={showSwipeButtons}
                 onValueChange={(value) => setShowSwipeButtons(value)}
@@ -243,6 +253,41 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
       fontSize: 16,
       ...typography.bold,
     },
+    sectionSubtitle: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      ...typography.regular,
+      marginTop: -4,
+    },
+    switchRow: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+    },
+    cardCompact: {
+      backgroundColor: colors.surfaceElevated,
+      borderColor: colors.border,
+      borderRadius: 16,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: colors.isDark ? 0.28 : 0.08,
+      shadowRadius: 10,
+      elevation: colors.isDark ? 4 : 2,
+    },
+    cardCompactInner: {
+      alignItems: 'center',
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 12,
+    },
+    cardCompactText: {
+      flex: 1,
+      gap: 2,
+    },
+    switchWrapper: {},
     privacyList: {
       borderColor: colors.border,
       borderRadius: 12,

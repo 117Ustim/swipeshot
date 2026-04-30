@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "SwipeShot",
+    "name": "SwipeShot: Photo Cleaner",
     "slug": "swipeshot",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -13,10 +13,20 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true,
+      "bundleIdentifier": "com.ustimweb72.swipeshot",
+      "buildNumber": "1",
+      "supportsTablet": false,
       "infoPlist": {
-        "NSPhotoLibraryUsageDescription": "SwipeShot нужен доступ к вашей медиатеке, чтобы показывать и удалять выбранные фото и видео.",
-        "NSPhotoLibraryAddUsageDescription": "SwipeShot нужен доступ к медиатеке, чтобы сохранять избранные файлы."
+        "NSPhotoLibraryUsageDescription": "SwipeShot needs access to your media library to show and delete selected photos and videos.",
+        "NSPhotoLibraryAddUsageDescription": "SwipeShot needs access to your media library to save favorite files.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "locales": {
+        "uk": "./locales/uk.lproj/InfoPlist.strings",
+        "ru": "./locales/ru.lproj/InfoPlist.strings",
+        "en": "./locales/en.lproj/InfoPlist.strings",
+        "de": "./locales/de.lproj/InfoPlist.strings",
+        "fr": "./locales/fr.lproj/InfoPlist.strings"
       }
     },
     "android": {
@@ -26,7 +36,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.ustimweb72.swipeshot"
     },
     "web": {
       "bundler": "metro",
@@ -35,10 +46,18 @@
     },
     "plugins": [
       "expo-router",
-      "expo-video"
+      "expo-video",
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "a97d704f-33f6-42af-b0ba-3999bb77381e"
+      }
+    },
+    "owner": "ustimweb72"
   }
 }

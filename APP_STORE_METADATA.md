@@ -3,9 +3,9 @@
 ## 📝 Основная информация
 
 ### Название приложения
-**Английский:** SwipeShot  
-**Русский:** SwipeShot  
-**Украинский:** SwipeShot
+**Английский:** SwipeShot: Photo Cleaner
+**Русский:** SwipeShot: Photo Cleaner
+**Украинский:** SwipeShot: Photo Cleaner
 
 **Подзаголовок (30 символов макс):**
 - 🇬🇧 EN: `Clean your gallery with swipes`
@@ -24,7 +24,8 @@ SwipeShot - Quick Gallery Cleanup
 Clean your iPhone photo gallery in seconds with intuitive swipe gestures!
 
 🎯 SIMPLE & FAST
-Swipe left to delete, right to keep, up to favorite. That's it! No complicated menus or settings.
+Just two gestures — swipe left to delete, swipe right to keep.
+No complicated menus, no confusion. Just fast and easy cleanup.
 
 📸 SMART ORGANIZATION
 • Automatic grouping by months and years
@@ -34,12 +35,7 @@ Swipe left to delete, right to keep, up to favorite. That's it! No complicated m
 🗑️ SAFE DELETION
 • Review all selected photos before deletion
 • Undo anytime before final confirmation
-• No accidental deletions
-
-⭐ FAVORITES
-• Swipe up to add photos to favorites
-• Automatic sync with system "SwipeShot Favorites" album
-• Quick access to your best shots
+• No accidental deletions — always one step to confirm
 
 🎨 BEAUTIFUL DESIGN
 • Native iOS design
@@ -75,7 +71,8 @@ SwipeShot - Быстрая очистка галереи
 Очистите галерею iPhone за секунды с помощью интуитивных свайпов!
 
 🎯 ПРОСТО И БЫСТРО
-Свайп влево - удалить, вправо - оставить, вверх - в избранное. Никаких сложных меню!
+Всего два жеста — свайп влево чтобы удалить, свайп вправо чтобы оставить.
+Никаких сложных меню, никакой путаницы. Просто быстрая очистка.
 
 📸 УМНАЯ ОРГАНИЗАЦИЯ
 • Автоматическая группировка по месяцам и годам
@@ -85,12 +82,7 @@ SwipeShot - Быстрая очистка галереи
 🗑️ БЕЗОПАСНОЕ УДАЛЕНИЕ
 • Просмотр всех выбранных фото перед удалением
 • Отмена в любой момент до подтверждения
-• Никаких случайных удалений
-
-⭐ ИЗБРАННОЕ
-• Свайп вверх для добавления в избранное
-• Автосинхронизация с системным альбомом "SwipeShot Favorites"
-• Быстрый доступ к лучшим снимкам
+• Никаких случайных удалений — всегда один шаг до подтверждения
 
 🎨 КРАСИВЫЙ ДИЗАЙН
 • Нативный iOS дизайн
@@ -126,7 +118,8 @@ SwipeShot - Швидке очищення галереї
 Очистіть галерею iPhone за секунди за допомогою інтуїтивних свайпів!
 
 🎯 ПРОСТО І ШВИДКО
-Свайп вліво - видалити, вправо - залишити, вгору - в обране. Ніяких складних меню!
+Лише два жести — свайп вліво щоб видалити, свайп вправо щоб залишити.
+Ніяких складних меню, ніякої плутанини. Просто швидке очищення.
 
 📸 РОЗУМНА ОРГАНІЗАЦІЯ
 • Автоматичне групування по місяцях та роках
@@ -136,12 +129,7 @@ SwipeShot - Швидке очищення галереї
 🗑️ БЕЗПЕЧНЕ ВИДАЛЕННЯ
 • Перегляд всіх обраних фото перед видаленням
 • Скасування в будь-який момент до підтвердження
-• Ніяких випадкових видалень
-
-⭐ ОБРАНЕ
-• Свайп вгору для додавання в обране
-• Автосинхронізація з системним альбомом "SwipeShot Favorites"
-• Швидкий доступ до найкращих знімків
+• Ніяких випадкових видалень — завжди один крок до підтвердження
 
 🎨 ГАРНИЙ ДИЗАЙН
 • Нативний iOS дизайн
@@ -185,14 +173,14 @@ photo,gallery,cleanup,delete,swipe,organize,storage,camera,album,manager
 
 **Украинский:**
 ```
-фото,галерея,очищення,видалення,свайп,організація,пам'ять,камера,альбом
+фото,галерея,очищення,видалення,свайп,організація,памʼять,камера,альбом
 ```
 
 ---
 
 ## 📂 Категория
 
-**Primary Category:** Utilities (Утилиты)  
+**Primary Category:** Utilities (Утилиты)
 **Secondary Category:** Photo & Video (Фото и видео)
 
 ---
@@ -200,13 +188,6 @@ photo,gallery,cleanup,delete,swipe,organize,storage,camera,album,manager
 ## 🎯 Возрастной рейтинг
 
 **4+** (Для всех возрастов)
-
-Контент:
-- ❌ Нет насилия
-- ❌ Нет взрослого контента
-- ❌ Нет азартных игр
-- ❌ Нет покупок
-- ✅ Работа с фото пользователя
 
 ---
 
@@ -217,113 +198,44 @@ photo,gallery,cleanup,delete,swipe,organize,storage,camera,album,manager
 https://117ustim.github.io/swipeshot/
 ```
 
-**Support URL:** (опционально)
+**Support URL:**
 ```
-https://github.com/117Ustim/swipeshot/issues
-```
-
-**Marketing URL:** (опционально)
-```
-https://github.com/117Ustim/swipeshot
+https://117ustim.github.io/swipeshot/
 ```
 
 ---
 
-## 📸 Скриншоты (требования)
+## 📋 Рекламный текст (170 символов)
 
-### iPhone 6.7" (iPhone 15 Pro Max, 14 Pro Max, 13 Pro Max, 12 Pro Max)
-**Размер:** 1290 x 2796 pixels  
-**Количество:** 3-10 скриншотов
-
-### iPhone 6.5" (iPhone 11 Pro Max, XS Max)
-**Размер:** 1242 x 2688 pixels  
-**Количество:** 3-10 скриншотов
-
-### iPhone 5.5" (iPhone 8 Plus, 7 Plus, 6s Plus)
-**Размер:** 1242 x 2208 pixels  
-**Количество:** 3-10 скриншотов (опционально)
-
-**Рекомендуемые скриншоты:**
-1. Главный экран (список месяцев)
-2. Экран свайпа с карточкой
-3. Экран подтверждения удаления
-4. Экран настроек
-5. Экран избранного (если есть)
+```
+Clean your photo gallery with simple swipes. Delete or keep — fast and easy!
+```
 
 ---
 
-## 🎬 App Preview Video (опционально)
+## � Примечания для ревьюеров Apple
 
-**Длительность:** 15-30 секунд  
-**Формат:** .mov, .m4v, .mp4  
-**Разрешение:** Соответствует размерам скриншотов
+```
+SwipeShot is a utility for quick iPhone gallery cleanup.
 
-**Сценарий:**
-1. Открытие приложения (2 сек)
-2. Выбор месяца (2 сек)
-3. Свайп влево/вправо/вверх (5 сек)
-4. Экран подтверждения (3 сек)
-5. Успешное удаление (3 сек)
+To test:
+1. Allow photo access on first launch
+2. Select any month from the list
+3. Swipe cards:
+   - Swipe LEFT = delete
+   - Swipe RIGHT = keep
+4. Tap "Finish" to go to confirmation screen
+5. Confirm deletion
+
+App does NOT collect user data. Everything works locally on device.
+No accounts, no login, no internet required.
+
+Privacy Policy: https://117ustim.github.io/swipeshot/
+```
 
 ---
 
 ## 💰 Цена
 
-**Текущая:** FREE (Бесплатно)  
-**Будущая:** FREE + In-App Purchase ($2.99)
-
----
-
-## 📋 App Store Review Notes (для ревьюеров)
-
-```
-Привет, Apple Review Team!
-
-SwipeShot - это утилита для быстрой очистки галереи iPhone.
-
-Для тестирования:
-1. Разрешите доступ к фото при первом запуске
-2. Выберите любой месяц из списка
-3. Свайпайте карточки:
-   - Влево = удалить
-   - Вправо = оставить
-   - Вверх = в избранное
-4. Нажмите "Finish" для подтверждения
-
-Приложение НЕ собирает данные пользователей.
-Все работает локально на устройстве.
-
-Privacy Policy: https://117ustim.github.io/swipeshot/
-
-Спасибо за проверку!
-```
-
----
-
-## ✅ Чеклист перед отправкой
-
-- [ ] Название заполнено на всех языках
-- [ ] Описание заполнено на всех языках
-- [ ] Ключевые слова добавлены
-- [ ] Категория выбрана
-- [ ] Возрастной рейтинг установлен
-- [ ] Privacy Policy URL добавлен
-- [ ] Скриншоты загружены (минимум 3)
-- [ ] Иконка 1024x1024 загружена
-- [ ] App Store Review Notes заполнены
-- [ ] Контактная информация указана
-- [ ] Сборка загружена через Xcode/EAS
-
----
-
-## 🚀 Следующие шаги
-
-1. Создать скриншоты приложения
-2. Зарегистрировать Apple Developer аккаунт ($99/год)
-3. Создать App ID в App Store Connect
-4. Собрать приложение через EAS Build
-5. Загрузить сборку в App Store Connect
-6. Заполнить метаданные
-7. Отправить на проверку
-
-**Время проверки:** 24-72 часа
+**Текущая:** FREE (Бесплатно)
+**Будущая:** FREE + In-App Purchase

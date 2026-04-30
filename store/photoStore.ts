@@ -1,3 +1,4 @@
+import * as Localization from 'expo-localization';
 import * as MediaLibrary from 'expo-media-library';
 import { create } from 'zustand';
 
@@ -23,7 +24,7 @@ import { clearResolvedMediaUri } from '@/utils/resolveMediaUri';
 
 const PERSISTENCE_VERSION = 1;
 let didAttemptInitialPermissionRequest = false;
-const DEFAULT_LANGUAGE: LanguageCode = 'ru';
+const DEFAULT_LANGUAGE: LanguageCode = 'uk';
 const DEFAULT_REVIEW_MODE: ReviewMode = 'monthly';
 const DEFAULT_SWIPE_ACTION_VISIBILITY: SwipeActionVisibility = {
   delete: true,
@@ -31,6 +32,25 @@ const DEFAULT_SWIPE_ACTION_VISIBILITY: SwipeActionVisibility = {
   keep: true,
   skip: true,
 };
+
+// Поддерживаемые языки приложения
+const SUPPORTED_LANGUAGES: LanguageCode[] = ['uk', 'ru', 'en', 'de', 'fr'];
+
+/**
+ * Определяет язык системы и возвращает подходящий LanguageCode.
+ * Если язык системы не поддерживается — возвращает DEFAULT_LANGUAGE (украинский).
+ */
+function detectSystemLanguage(): LanguageCode {
+  const locales = Localization.getLocales();
+  for (const locale of locales) {
+    // Берём только код языка без региона (например 'uk' из 'uk-UA')
+    const langCode = locale.languageCode?.toLowerCase() ?? '';
+    if ((SUPPORTED_LANGUAGES as string[]).includes(langCode)) {
+      return langCode as LanguageCode;
+    }
+  }
+  return DEFAULT_LANGUAGE;
+}
 
 function normalizeReviewMode(value: unknown): ReviewMode {
   return value === 'yearly' ? 'yearly' : 'monthly';
@@ -366,6 +386,8 @@ export const usePhotoStore = create<AppState>((set, get) => ({
   loadState: async () => {
     const persisted = await readPersistedStateFromDisk();
     if (!persisted || persisted.version !== PERSISTENCE_VERSION) {
+      // Первый запуск — устанавливаем язык системы
+      set({ language: detectSystemLanguage() });
       return;
     }
 
@@ -403,7 +425,7 @@ export const usePhotoStore = create<AppState>((set, get) => ({
       currentMonthId: restoredMonthId,
       currentIndex: restoredIndex,
       monthProgress: restoredMonthProgress,
-      language: persisted.language ?? DEFAULT_LANGUAGE,
+      language: persisted.language ?? detectSystemLanguage(),
       reviewMode: normalizeReviewMode(persisted.reviewMode),
       swipeActionVisibility: normalizeSwipeActionVisibility(persisted.swipeActionVisibility),
       showSwipeButtons: persisted.showSwipeButtons ?? true,

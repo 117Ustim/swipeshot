@@ -1,0 +1,5 @@
+/* Mediathekzugriff zum Anzeigen und Löschen */
+"NSPhotoLibraryUsageDescription" = "SwipeShot benötigt Zugriff auf deine Mediathek, um ausgewählte Fotos und Videos anzuzeigen und zu löschen.";
+
+/* Mediathekzugriff zum Speichern in Favoriten */
+"NSPhotoLibraryAddUsageDescription" = "SwipeShot benötigt Zugriff auf deine Mediathek, um Favoritendateien zu speichern.";
