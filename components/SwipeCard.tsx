@@ -34,6 +34,7 @@ export type SwipeCardProps = {
   item: MediaItem;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
+  onSwipeUp: () => void;
 };
 
 function formatDuration(seconds?: number) {
@@ -47,6 +48,7 @@ export const SwipeCard = React.memo(function SwipeCard({
   item,
   onSwipeLeft,
   onSwipeRight,
+  onSwipeUp,
 }: SwipeCardProps) {
   const colors = useAppTheme();
   const { t } = useI18n();
@@ -205,6 +207,10 @@ export const SwipeCard = React.memo(function SwipeCard({
     }
   };
 
+  const completeSwipeUp = () => {
+    onSwipeUp();
+  };
+
   const animateOut = (direction: 'left' | 'right') => {
     'worklet';
     const targetX = direction === 'left' ? -OFFSCREEN_X : OFFSCREEN_X;
@@ -217,6 +223,23 @@ export const SwipeCard = React.memo(function SwipeCard({
     cardScale.value = withTiming(0.94, { duration: 200 });
     opacity.value = withTiming(0, { duration: 210 }, () => {
       runOnJS(completeSwipe)(direction);
+      translateX.value = 0;
+      translateY.value = 0;
+      rotation.value = 0;
+      cardScale.value = 1;
+      opacity.value = 0;
+      isAnimating.value = false;
+    });
+  };
+
+  const animateOutUp = () => {
+    'worklet';
+    translateX.value = withTiming(0, { duration: 220 });
+    translateY.value = withTiming(-OFFSCREEN_Y, { duration: 220 });
+    rotation.value = withTiming(0, { duration: 220 });
+    cardScale.value = withTiming(0.94, { duration: 200 });
+    opacity.value = withTiming(0, { duration: 210 }, () => {
+      runOnJS(completeSwipeUp)();
       translateX.value = 0;
       translateY.value = 0;
       rotation.value = 0;
@@ -252,9 +275,17 @@ export const SwipeCard = React.memo(function SwipeCard({
       const isFastUpFlick = event.velocityY < -FLICK_VELOCITY_Y;
 
       const horizontalDominates = Math.abs(translateX.value) > Math.abs(translateY.value) * 1.4;
+      const verticalDominates = Math.abs(translateY.value) > Math.abs(translateX.value) * 1.4;
 
       const isSwipeRight = horizontalDominates && (movedRightEnough || isFastRightFlick);
       const isSwipeLeft = horizontalDominates && (movedLeftEnough || isFastLeftFlick);
+      const isSwipeUp = verticalDominates && (movedUpEnough || isFastUpFlick);
+
+      if (isSwipeUp) {
+        isAnimating.value = true;
+        animateOutUp();
+        return;
+      }
 
       if (isSwipeLeft || isSwipeRight) {
         isAnimating.value = true;

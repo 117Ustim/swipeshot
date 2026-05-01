@@ -36,7 +36,7 @@ export async function fetchAllMediaItems(): Promise<MediaItem[]> {
 
   while (hasNextPage) {
     const page = await MediaLibrary.getAssetsAsync({
-      first: 100,
+      first: 500,
       after,
       mediaType: [MediaLibrary.MediaType.photo, MediaLibrary.MediaType.video],
       sortBy: [MediaLibrary.SortBy.creationTime],

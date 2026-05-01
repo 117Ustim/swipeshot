@@ -99,7 +99,7 @@ export default function MonthsScreen() {
   );
 
   const handleRetry = useCallback(async () => {
-    await refetch();
+    await refetch(true);
   }, [refetch]);
 
   const handleOpenPermissions = useCallback(() => {

@@ -6,14 +6,18 @@ import {
     AppState,
     AppTheme,
     DeletionResult,
+    GamificationState,
     LanguageCode,
     MediaItem,
     MonthSession,
     PersistedState,
     ReviewMode,
+    SessionStats,
     SwipeActionKey,
-    SwipeActionVisibility,
+    SwipeActionVisibility
 } from '@/types';
+import { buildInitialAchievements, checkAchievements, updateStreak } from '@/utils/achievements';
+import { calculateLevel } from '@/utils/levels';
 import { logAppError } from '@/utils/errorLogger';
 import { addAssetToFavoritesAlbum } from '@/utils/favoritesAlbum';
 import { groupByMonth } from '@/utils/groupByMonth';
@@ -110,6 +114,24 @@ function clampProgressByMonths(
   return result;
 }
 
+const DEFAULT_GAMIFICATION_STATE: GamificationState = {
+  enabled: true,
+  achievements: buildInitialAchievements(),
+  stats: {
+    xp: 0,
+    level: 1,
+    totalDeleted: 0,
+    totalFavorites: 0,
+    totalKept: 0,
+    totalFreedBytes: 0,
+    sessionsCount: 0,
+    currentStreak: 0,
+    lastSessionDate: null,
+  },
+  currentSession: null,
+  pendingToastAchievementIds: [],
+};
+
 const EMPTY_DELETION_RESULT: DeletionResult = {
   deletedCount: 0,
   failedCount: 0,
@@ -134,10 +156,24 @@ export const usePhotoStore = create<AppState>((set, get) => ({
   showSwipeButtons: true,
   theme: 'dark',
   activeSession: null,
+  gamification: DEFAULT_GAMIFICATION_STATE,
 
   hasMediaLibraryPermission: false,
+  galleryLoadedAt: null,
 
-  loadGallery: async () => {
+  loadGallery: async (forceRefresh?: boolean) => {
+    const state = get();
+
+    // Если галерея уже загружена и не требуется принудительное обновление — пропускаем
+    if (
+      !forceRefresh &&
+      state.months.length > 0 &&
+      state.galleryLoadedAt !== null &&
+      !state.galleryError
+    ) {
+      return;
+    }
+
     set({ isLoadingGallery: true, galleryError: null });
 
     try {
@@ -169,6 +205,7 @@ export const usePhotoStore = create<AppState>((set, get) => ({
         galleryError: null,
         hasMediaLibraryPermission: true,
         activeSession: null,
+        galleryLoadedAt: Date.now(),
       });
 
       await get().loadState();
@@ -227,6 +264,9 @@ export const usePhotoStore = create<AppState>((set, get) => ({
       deletionQueue: state.deletionQueue.map((item) =>
         item.id === itemId ? { ...item, fileSize } : item
       ),
+      favorites: state.favorites.map((item) =>
+        item.id === itemId ? { ...item, fileSize } : item
+      ),
     }));
   },
   addToSafe: (item: MediaItem) => {
@@ -247,6 +287,10 @@ export const usePhotoStore = create<AppState>((set, get) => ({
       });
     }
 
+    void get().saveState();
+  },
+  removeFromFavorites: (itemId: string) => {
+    set((state) => ({ favorites: state.favorites.filter((item) => item.id !== itemId) }));
     void get().saveState();
   },
   confirmDeletion: async () => {
@@ -378,6 +422,13 @@ export const usePhotoStore = create<AppState>((set, get) => ({
       swipeActionVisibility: state.swipeActionVisibility,
       showSwipeButtons: state.showSwipeButtons,
       theme: state.theme,
+      gamification: {
+        enabled: state.gamification.enabled,
+        achievements: state.gamification.achievements,
+        stats: state.gamification.stats,
+        currentSession: null,
+        pendingToastAchievementIds: [],
+      },
       lastSync: Date.now(),
     };
 
@@ -431,6 +482,174 @@ export const usePhotoStore = create<AppState>((set, get) => ({
       showSwipeButtons: persisted.showSwipeButtons ?? true,
       theme: (persisted.theme as AppTheme) ?? 'dark',
       activeSession: null,
+      gamification: {
+        ...DEFAULT_GAMIFICATION_STATE,
+        ...(persisted.gamification ?? {}),
+        // Всегда сбрасываем сессионные данные при загрузке
+        currentSession: null,
+        pendingToastAchievementIds: [],
+        // Восстанавливаем достижения с мержем дефолтных
+        achievements: {
+          ...DEFAULT_GAMIFICATION_STATE.achievements,
+          ...(persisted.gamification?.achievements ?? {}),
+        },
+        stats: {
+          ...DEFAULT_GAMIFICATION_STATE.stats,
+          ...(persisted.gamification?.stats ?? {}),
+          xp: persisted.gamification?.stats?.xp ?? 0,
+          level: persisted.gamification?.stats?.level ?? 1,
+        },
+      },
     });
+  },
+
+  // ─── Геймификация ──────────────────────────────────────────────────────────
+
+  setGamificationEnabled: (enabled: boolean) => {
+    set((state) => ({
+      gamification: { ...state.gamification, enabled },
+    }));
+    void get().saveState();
+  },
+
+  startGamificationSession: () => {
+    set((state) => ({
+      gamification: {
+        ...state.gamification,
+        currentSession: {
+          deletedCount: 0,
+          favoritesCount: 0,
+          keptCount: 0,
+          freedBytes: 0,
+          earnedXp: 0,
+          startedAt: Date.now(),
+        },
+      },
+    }));
+  },
+
+  endGamificationSession: () => {
+    const state = get();
+    const { gamification } = state;
+    if (!gamification.enabled || !gamification.currentSession) return;
+
+    const session = gamification.currentSession;
+    const newXp = (gamification.stats.xp ?? 0) + (session.earnedXp ?? 0);
+    const newLevel = calculateLevel(newXp);
+
+    const updatedStats = updateStreak({
+      ...gamification.stats,
+      xp: newXp,
+      level: Math.max(gamification.stats.level ?? 1, newLevel),
+      totalDeleted: gamification.stats.totalDeleted + session.deletedCount,
+      totalFavorites: gamification.stats.totalFavorites + session.favoritesCount,
+      totalKept: (gamification.stats.totalKept ?? 0) + (session.keptCount ?? 0),
+      totalFreedBytes: gamification.stats.totalFreedBytes + session.freedBytes,
+      sessionsCount: gamification.stats.sessionsCount + 1,
+    });
+
+    const newlyUnlocked = checkAchievements(updatedStats, session, gamification.achievements);
+
+    const now = Date.now();
+    const updatedAchievements = { ...gamification.achievements };
+    newlyUnlocked.forEach((id) => {
+      updatedAchievements[id] = { ...updatedAchievements[id], unlockedAt: now };
+    });
+
+    set((s) => ({
+      gamification: {
+        ...s.gamification,
+        stats: updatedStats,
+        currentSession: null,
+        achievements: updatedAchievements,
+        pendingToastAchievementIds: [...s.gamification.pendingToastAchievementIds, ...newlyUnlocked],
+      },
+    }));
+    void get().saveState();
+  },
+
+  recordSwipeAction: (action: 'delete' | 'favorite' | 'keep', freedBytes: number) => {
+    const state = get();
+    const { gamification } = state;
+    if (!gamification.enabled || !gamification.currentSession) return;
+
+    let xpEarned = 0;
+    if (action === 'keep') xpEarned = 1;
+    if (action === 'favorite') xpEarned = 2;
+    if (action === 'delete') {
+      xpEarned = 5 + Math.floor(freedBytes / (1024 * 1024 * 10)); // +1 XP per 10MB
+    }
+
+    const updatedSession: SessionStats = {
+      ...gamification.currentSession,
+      deletedCount: gamification.currentSession.deletedCount + (action === 'delete' ? 1 : 0),
+      favoritesCount: gamification.currentSession.favoritesCount + (action === 'favorite' ? 1 : 0),
+      keptCount: (gamification.currentSession.keptCount ?? 0) + (action === 'keep' ? 1 : 0),
+      freedBytes: gamification.currentSession.freedBytes + (action === 'delete' ? freedBytes : 0),
+      earnedXp: (gamification.currentSession.earnedXp ?? 0) + xpEarned,
+    };
+
+    const tempNewXp = (gamification.stats.xp ?? 0) + updatedSession.earnedXp;
+    const tempNewLevel = calculateLevel(tempNewXp);
+
+    // Временные stats для проверки достижений (с учётом текущей сессии)
+    const tempStats = {
+      ...gamification.stats,
+      xp: tempNewXp,
+      level: Math.max(gamification.stats.level ?? 1, tempNewLevel), // never go down
+      totalDeleted: gamification.stats.totalDeleted + updatedSession.deletedCount,
+      totalFavorites: gamification.stats.totalFavorites + updatedSession.favoritesCount,
+      totalKept: (gamification.stats.totalKept ?? 0) + updatedSession.keptCount,
+      totalFreedBytes: gamification.stats.totalFreedBytes + updatedSession.freedBytes,
+      sessionsCount: gamification.stats.sessionsCount,
+      currentStreak: gamification.stats.currentStreak,
+      lastSessionDate: gamification.stats.lastSessionDate,
+    };
+
+    const newlyUnlocked = checkAchievements(tempStats, updatedSession, gamification.achievements);
+
+    if (newlyUnlocked.length > 0) {
+      const now = Date.now();
+      const updatedAchievements = { ...gamification.achievements };
+      newlyUnlocked.forEach((id) => {
+        updatedAchievements[id] = { ...updatedAchievements[id], unlockedAt: now };
+      });
+
+      set((s) => ({
+        gamification: {
+          ...s.gamification,
+          currentSession: updatedSession,
+          achievements: updatedAchievements,
+          // Добавляем новые достижения в очередь тостов
+          pendingToastAchievementIds: [...s.gamification.pendingToastAchievementIds, ...newlyUnlocked],
+        },
+      }));
+    } else {
+      set((s) => ({
+        gamification: {
+          ...s.gamification,
+          currentSession: updatedSession,
+        },
+      }));
+    }
+  },
+
+  clearPendingToast: () => {
+    set((state) => ({
+      gamification: {
+        ...state.gamification,
+        pendingToastAchievementIds: state.gamification.pendingToastAchievementIds.slice(1),
+      },
+    }));
+  },
+
+  resetGamification: () => {
+    set((state) => ({
+      gamification: {
+        ...DEFAULT_GAMIFICATION_STATE,
+        enabled: state.gamification.enabled, // сохраняем настройку включения/отключения
+      },
+    }));
+    void get().saveState();
   },
 }));

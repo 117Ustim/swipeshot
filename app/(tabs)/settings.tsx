@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import { useCallback, useMemo } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { GradientBackground } from '@/components/GradientBackground';
@@ -33,6 +34,7 @@ export default function SettingsScreen() {
   const { t, getLanguageLabel } = useI18n();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const { openSettings } = usePermissions();
+  const router = useRouter();
   const language = usePhotoStore((state) => state.language);
   const reviewMode = usePhotoStore((state) => state.reviewMode);
   const theme = usePhotoStore((state) => state.theme);
@@ -41,6 +43,9 @@ export default function SettingsScreen() {
   const setReviewMode = usePhotoStore((state) => state.setReviewMode);
   const setTheme = usePhotoStore((state) => state.setTheme);
   const setShowSwipeButtons = usePhotoStore((state) => state.setShowSwipeButtons);
+  const gamificationEnabled = usePhotoStore((state) => state.gamification.enabled);
+  const setGamificationEnabled = usePhotoStore((state) => state.setGamificationEnabled);
+  const resetGamification = usePhotoStore((state) => state.resetGamification);
 
   const appVersion = useMemo(() => getAppVersionLabel(), []);
 
@@ -144,11 +149,30 @@ export default function SettingsScreen() {
   }, [getThemeLabel, handleSelectTheme, theme, t]);
 
 
+  const handleResetGamification = useCallback(() => {
+    Alert.alert(
+      t('settings.resetGamification'),
+      t('settings.resetGamificationAlert'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('settings.resetGamification'),
+          style: 'destructive',
+          onPress: resetGamification,
+        },
+      ]
+    );
+  }, [resetGamification, t]);
+
   return (
     <GradientBackground>
       <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-        <Text style={styles.title}>{t('settings.title')}</Text>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.container}
+          showsVerticalScrollIndicator={false}
+        >
+          <Text style={styles.title}>{t('settings.title')}</Text>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('settings.privacyTitle')}</Text>
@@ -163,6 +187,17 @@ export default function SettingsScreen() {
             </Pressable>
           </View>
         </View>
+
+        {/* Карточка дубликатов */}
+        <Pressable style={styles.card} onPress={() => router.push('/duplicates')}>
+          <View style={styles.duplicatesRow}>
+            <View style={styles.duplicatesText}>
+              <Text style={styles.sectionTitle}>{t('settings.duplicatesTitle')}</Text>
+              <Text style={styles.duplicatesSubtitle}>{t('settings.duplicatesSubtitle')}</Text>
+            </View>
+            <Text style={styles.privacyItemAction}>›</Text>
+          </View>
+        </Pressable>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>{t('settings.languageTitle')}</Text>
@@ -207,11 +242,42 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Карточка геймификации */}
+        <View style={styles.cardCompact}>
+          <View style={styles.cardCompactInner}>
+            <View style={styles.cardCompactText}>
+              <Text style={styles.sectionTitle}>{t('settings.gamificationTitle')}</Text>
+              <Text style={styles.sectionSubtitle}>{t('settings.gamificationSubtitle')}</Text>
+            </View>
+            <View style={styles.switchWrapper}>
+              <Switch
+                value={gamificationEnabled}
+                onValueChange={(value) => setGamificationEnabled(value)}
+                thumbColor={colors.surfaceElevated}
+                trackColor={{ false: colors.surfaceMuted, true: colors.accent }}
+                ios_backgroundColor={colors.surfaceMuted}
+              />
+            </View>
+          </View>
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 12, opacity: 0.5 }} />
+          <Pressable onPress={() => router.push('/achievements')} style={{ paddingVertical: 8, paddingBottom: 4 }}>
+            <Text style={{ color: colors.primary, fontSize: 16, ...typography.semibold }}>
+              {t('settings.viewAchievements') || 'Открыть профиль'}
+            </Text>
+          </Pressable>
+          <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 12, opacity: 0.5 }} />
+          <Pressable onPress={handleResetGamification} style={{ paddingVertical: 4 }}>
+            <Text style={{ color: '#FF4B4B', fontSize: 15, ...typography.medium }}>
+              {t('settings.resetGamification')}
+            </Text>
+          </Pressable>
+        </View>
+
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>{t('settings.versionLabel')}</Text>
           <Text style={styles.infoValue}>{appVersion}</Text>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
     </GradientBackground>
   );
@@ -223,11 +289,13 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
       flex: 1,
       backgroundColor: 'transparent',
     },
-    container: {
+    scrollView: {
       flex: 1,
-      backgroundColor: 'transparent',
+    },
+    container: {
       paddingHorizontal: 20,
       paddingTop: 12,
+      paddingBottom: 100, // Отступ для таб-бара
       gap: 16,
     },
     title: {
@@ -317,6 +385,20 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
     },
     privacyItemLast: {
       borderBottomWidth: 0,
+    },
+    duplicatesRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    duplicatesText: {
+      flex: 1,
+    },
+    duplicatesSubtitle: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      ...typography.regular,
+      marginTop: 2,
     },
     toggleRow: {
       alignItems: 'center',

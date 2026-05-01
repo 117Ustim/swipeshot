@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionButton } from '@/components/ActionButton';
@@ -42,11 +42,24 @@ export default function SwipeScreen() {
   const addToSafe = usePhotoStore((state) => state.addToSafe);
   const addToFavorites = usePhotoStore((state) => state.addToFavorites);
 
+  // Геймификация
+  const gamificationEnabled = usePhotoStore((state) => state.gamification.enabled);
+  const recordSwipeAction = usePhotoStore((state) => state.recordSwipeAction);
+  const startGamificationSession = usePhotoStore((state) => state.startGamificationSession);
+  const endGamificationSession = usePhotoStore((state) => state.endGamificationSession);
+
   useEffect(() => {
     if (monthId && currentMonthId !== monthId) {
       setCurrentMonth(monthId);
     }
   }, [currentMonthId, monthId, setCurrentMonth]);
+
+  // Стартуем сессию геймификации при входе на экран
+  useEffect(() => {
+    if (gamificationEnabled) {
+      startGamificationSession();
+    }
+  }, []);
 
   const items = useMemo(() => month?.items ?? [], [month]);
   const total = items.length;
@@ -128,15 +141,24 @@ export default function SwipeScreen() {
 
       if (direction === 'left') {
         addToDeletionQueue(targetItem);
+        if (gamificationEnabled) {
+          recordSwipeAction('delete', targetItem.fileSize ?? 0);
+        }
       } else if (direction === 'right') {
         addToSafe(targetItem);
+        if (gamificationEnabled) {
+          recordSwipeAction('keep', 0);
+        }
       } else {
         addToFavorites(targetItem);
+        if (gamificationEnabled) {
+          recordSwipeAction('favorite', 0);
+        }
       }
 
       moveToNext(currentEntry.sourceIndex);
     },
-    [addToDeletionQueue, addToFavorites, addToSafe, currentEntry, moveToNext]
+    [addToDeletionQueue, addToFavorites, addToSafe, currentEntry, gamificationEnabled, moveToNext, recordSwipeAction]
   );
 
   const handleSkip = useCallback(() => {
@@ -149,6 +171,7 @@ export default function SwipeScreen() {
 
   const handleSwipeLeft = useCallback(() => handleSwipe('left'), [handleSwipe]);
   const handleSwipeRight = useCallback(() => handleSwipe('right'), [handleSwipe]);
+  const handleSwipeUp = useCallback(() => handleSwipe('up'), [handleSwipe]);
   const showSwipeButtons = usePhotoStore((state) => state.showSwipeButtons);
 
   const handleEmptyAction = useCallback(() => {
@@ -198,6 +221,7 @@ export default function SwipeScreen() {
                 item={currentItem}
                 onSwipeLeft={handleSwipeLeft}
                 onSwipeRight={handleSwipeRight}
+                onSwipeUp={handleSwipeUp}
               />
             ) : (
               <EmptyState title={t('swipe.filterDoneTitle')} subtitle={t('swipe.filterDoneSubtitle')} />

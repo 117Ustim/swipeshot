@@ -8,8 +8,8 @@ export function useGallery() {
   const error = usePhotoStore((state) => state.galleryError);
   const loadGallery = usePhotoStore((state) => state.loadGallery);
 
-  const refetch = useCallback(async () => {
-    await loadGallery();
+  const refetch = useCallback(async (forceRefresh?: boolean) => {
+    await loadGallery(forceRefresh);
   }, [loadGallery]);
 
   return {

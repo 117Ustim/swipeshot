@@ -7,17 +7,19 @@ import { getMediaItemFileSize } from '@/utils/mediaLibrary';
 const BATCH_SIZE = 3; // Загружаем по 3 файла одновременно
 const BATCH_DELAY = 100; // Задержка между батчами (мс)
 
-export function useFileSizeLoader() {
+export function useFileSizeLoader(items?: MediaItem[]) {
   const deletionQueue = usePhotoStore((state) => state.deletionQueue);
   const updateItemFileSize = usePhotoStore((state) => state.updateItemFileSize);
   const isLoadingRef = useRef(false);
+
+  const targetItems = items ?? deletionQueue;
 
   useEffect(() => {
     if (isLoadingRef.current) {
       return;
     }
 
-    const itemsToLoad = deletionQueue.filter((item) => item.fileSize === 0);
+    const itemsToLoad = targetItems.filter((item) => item.fileSize === 0);
     if (itemsToLoad.length === 0) {
       return;
     }
@@ -50,5 +52,5 @@ export function useFileSizeLoader() {
     };
 
     void loadSizes();
-  }, [deletionQueue, updateItemFileSize]);
+  }, [targetItems, updateItemFileSize]);
 }

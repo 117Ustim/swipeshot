@@ -11,6 +11,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { typography } from '@/constants/typography';
 import { useI18n } from '@/hooks/useI18n';
+import { usePhotoStore } from '@/store/photoStore';
+import { AchievementToast } from '@/components/AchievementToast';
 
 export {
     ErrorBoundary
@@ -66,9 +68,26 @@ function RootLayoutNav() {
             }}
           />
           <Stack.Screen name="confirmation/[monthId]" options={{ headerShown: false }} />
+          <Stack.Screen name="duplicates" options={{ headerShown: false }} />
         </Stack>
+        <AchievementToastWrapper />
       </ThemeProvider>
     </GestureHandlerRootView>
+  );
+}
+
+function AchievementToastWrapper() {
+  const gamificationEnabled = usePhotoStore((state) => state.gamification.enabled);
+  const pendingToastIds = usePhotoStore((state) => state.gamification.pendingToastAchievementIds);
+  const clearPendingToast = usePhotoStore((state) => state.clearPendingToast);
+
+  if (!gamificationEnabled) return null;
+
+  return (
+    <AchievementToast
+      achievementId={pendingToastIds[0] ?? null}
+      onHide={clearPendingToast}
+    />
   );
 }
 
