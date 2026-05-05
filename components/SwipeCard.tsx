@@ -338,6 +338,7 @@ export const SwipeCard = React.memo(function SwipeCard({
               </Text>
             </View>
           )}
+          {/* Динамические индикаторы при свайпе */}
           <View pointerEvents="none" style={styles.indicators}>
             <Animated.View style={[styles.indicatorChip, styles.indicatorDelete, leftIndicatorStyle]}>
               <Text style={styles.indicatorText}>{t('media.delete')}</Text>
@@ -402,13 +403,13 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
     indicatorDelete: {
       backgroundColor: 'rgba(239, 68, 68, 0.2)',
       borderColor: '#EF4444',
-      left: 16,
+      right: 16,
       top: 16,
     },
     indicatorKeep: {
       backgroundColor: 'rgba(34, 197, 94, 0.2)',
       borderColor: '#22C55E',
-      right: 16,
+      left: 16,
       top: 16,
     },
     indicatorFavorite: {

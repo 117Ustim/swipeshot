@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { runOnJS, useAnimatedStyle, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActionButton } from '@/components/ActionButton';
@@ -22,6 +23,48 @@ type SwipeQueueEntry = {
   item: MediaItem;
   sourceIndex: number;
 };
+
+// Кнопка-подсказка со стрелкой, иконкой и лейблом
+type SwipeActionButtonProps = {
+  emoji: string;
+  label: string;
+  arrow: string;
+  color: string;
+  onPress: () => void;
+  style?: object;
+};
+
+function SwipeActionButton({ emoji, label, arrow, color, onPress, style }: SwipeActionButtonProps) {
+  const colors = useAppTheme();
+  return (
+    <TouchableOpacity
+      activeOpacity={0.75}
+      onPress={onPress}
+      style={[{
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.surfaceElevated,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: color + '55',
+        paddingVertical: 6,
+        paddingHorizontal: 6,
+        gap: 4,
+        shadowColor: color,
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.15,
+        shadowRadius: 6,
+        elevation: 2,
+      }, style]}
+    >
+      <Text style={{ fontSize: 14 }}>{emoji}</Text>
+      <Text style={{ color, fontSize: 12, fontFamily: typography.semibold.fontFamily }}>{label}</Text>
+      <Text style={{ color: color + 'AA', fontSize: 12, fontFamily: typography.bold.fontFamily }}>{arrow}</Text>
+    </TouchableOpacity>
+  );
+}
 
 export default function SwipeScreen() {
   const colors = useAppTheme();
@@ -174,6 +217,32 @@ export default function SwipeScreen() {
   const handleSwipeUp = useCallback(() => handleSwipe('up'), [handleSwipe]);
   const showSwipeButtons = usePhotoStore((state) => state.showSwipeButtons);
 
+  // --- Hint-оверлей при первом запуске ---
+  const [showHint, setShowHint] = useState(false);
+  const hintOpacity = useSharedValue(0);
+  const hintShown = useRef(false);
+
+  useEffect(() => {
+    // Показываем hint только один раз — проверяем через store
+    const alreadyShown = usePhotoStore.getState().swipeHintShown ?? false;
+    if (!alreadyShown && !hintShown.current) {
+      hintShown.current = true;
+      setShowHint(true);
+      hintOpacity.value = withDelay(400, withTiming(1, { duration: 350 }));
+    }
+  }, []);
+
+  const dismissHint = useCallback(() => {
+    hintOpacity.value = withTiming(0, { duration: 250 }, () => {
+      runOnJS(setShowHint)(false);
+    });
+    usePhotoStore.getState().setSwipeHintShown(true);
+  }, [hintOpacity]);
+
+  const hintAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: hintOpacity.value,
+  }));
+
   const handleEmptyAction = useCallback(() => {
     const hasDeletions = usePhotoStore.getState().deletionQueue.length > 0;
     if (hasDeletions) {
@@ -243,22 +312,31 @@ export default function SwipeScreen() {
           {hasActionButtons ? (
             <View style={styles.actionsRow}>
               {showDeleteButton ? (
-                <ActionButton
-                  title={t('swipe.actionDelete')}
+                <SwipeActionButton
+                  emoji="🗑"
+                  label={t('swipe.actionDelete')}
+                  arrow="←"
                   onPress={handleSwipeLeft}
+                  color="#EF4444"
                   style={styles.actionButton}
-                  compact
-                  singleLine
                 />
               ) : null}
+              <SwipeActionButton
+                emoji="⭐"
+                label="Favorite"
+                arrow="↑"
+                onPress={handleSwipeUp}
+                color="#F59E0B"
+                style={styles.actionButton}
+              />
               {showKeepButton ? (
-                <ActionButton
-                  title={t('swipe.actionKeep')}
+                <SwipeActionButton
+                  emoji="✓"
+                  label={t('swipe.actionKeep')}
+                  arrow="→"
                   onPress={handleSwipeRight}
-                  variant="secondary"
+                  color="#22C55E"
                   style={styles.actionButton}
-                  compact
-                  singleLine
                 />
               ) : null}
             </View>
@@ -270,6 +348,63 @@ export default function SwipeScreen() {
             </View>
           ) : null}
         </View>
+
+        {/* Hint-оверлей при первом запуске */}
+        {showHint ? (
+          <Animated.View style={[styles.hintOverlay, hintAnimatedStyle]}>
+            {/* Карточка-подсказка */}
+            <View style={styles.hintCard}>
+              {/* Заголовок */}
+              <Text style={styles.hintTitle}>How to swipe</Text>
+              <Text style={styles.hintSubtitle}>Sort your photos with simple gestures</Text>
+
+              {/* Три направления */}
+              <View style={styles.hintDirections}>
+                <View style={styles.hintRow}>
+                  <View style={[styles.hintIconBox, styles.hintIconBoxDelete]}>
+                    <Text style={styles.hintIconEmoji}>🗑</Text>
+                  </View>
+                  <View style={styles.hintRowText}>
+                    <Text style={styles.hintRowTitle}>Swipe Left</Text>
+                    <Text style={styles.hintRowDesc}>Delete photo</Text>
+                  </View>
+                  <Text style={[styles.hintArrowBig, { color: '#EF4444' }]}>←</Text>
+                </View>
+
+                <View style={styles.hintSep} />
+
+                <View style={styles.hintRow}>
+                  <View style={[styles.hintIconBox, styles.hintIconBoxFav]}>
+                    <Text style={styles.hintIconEmoji}>⭐</Text>
+                  </View>
+                  <View style={styles.hintRowText}>
+                    <Text style={styles.hintRowTitle}>Swipe Up</Text>
+                    <Text style={styles.hintRowDesc}>Add to Favorites</Text>
+                  </View>
+                  <Text style={[styles.hintArrowBig, { color: '#F59E0B' }]}>↑</Text>
+                </View>
+
+                <View style={styles.hintSep} />
+
+                <View style={styles.hintRow}>
+                  <View style={[styles.hintIconBox, styles.hintIconBoxKeep]}>
+                    <Text style={styles.hintIconEmoji}>✓</Text>
+                  </View>
+                  <View style={styles.hintRowText}>
+                    <Text style={styles.hintRowTitle}>Swipe Right</Text>
+                    <Text style={styles.hintRowDesc}>Keep photo</Text>
+                  </View>
+                  <Text style={[styles.hintArrowBig, { color: '#22C55E' }]}>→</Text>
+                </View>
+              </View>
+
+              {/* Кнопка */}
+              <Pressable style={styles.hintDismiss} onPress={dismissHint}>
+                <Text style={styles.hintDismissText}>Got it!</Text>
+              </Pressable>
+            </View>
+          </Animated.View>
+        ) : null}
       </SafeAreaView>
     </GradientBackground>
   );
@@ -327,21 +462,23 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
     },
     actionsRow: {
       flexDirection: 'row',
-      gap: 12,
+      gap: 10,
       justifyContent: 'center',
-      marginTop: 20,
+      marginTop: 8,
     },
     actionButton: {
-      minWidth: 140,
-      maxWidth: 160,
+      minWidth: 0,
+      maxWidth: 999,
     },
     finishContainer: {
       alignItems: 'center',
-      marginTop: 10,
+      marginTop: 6,
     },
     finishButton: {
       minWidth: 180,
       opacity: 0.85,
+      minHeight: 36,
+      paddingVertical: 6,
     },
     footer: {
       backgroundColor: colors.surfaceElevated,
@@ -357,5 +494,112 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
       shadowOpacity: colors.isDark ? 0.28 : 0.08,
       shadowRadius: 10,
       elevation: colors.isDark ? 4 : 2,
+    },
+    // Hint-оверлей
+    hintOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0, 0, 0, 0.75)',
+      zIndex: 100,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 24,
+    },
+    hintCard: {
+      width: '100%',
+      backgroundColor: colors.isDark ? '#1C2B3A' : '#FFFFFF',
+      borderRadius: 28,
+      padding: 28,
+      alignItems: 'center',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 20 },
+      shadowOpacity: 0.4,
+      shadowRadius: 40,
+      elevation: 20,
+      borderWidth: 1,
+      borderColor: colors.isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+    },
+    hintTitle: {
+      fontSize: 24,
+      color: colors.textPrimary,
+      ...typography.bold,
+      marginBottom: 6,
+    },
+    hintSubtitle: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      ...typography.regular,
+      marginBottom: 28,
+      textAlign: 'center',
+    },
+    hintDirections: {
+      width: '100%',
+      backgroundColor: colors.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)',
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      overflow: 'hidden',
+      marginBottom: 24,
+    },
+    hintRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      gap: 14,
+    },
+    hintSep: {
+      height: 1,
+      backgroundColor: colors.border,
+      marginHorizontal: 16,
+      opacity: 0.5,
+    },
+    hintIconBox: {
+      width: 44,
+      height: 44,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    hintIconBoxDelete: {
+      backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    },
+    hintIconBoxFav: {
+      backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    },
+    hintIconBoxKeep: {
+      backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    },
+    hintIconEmoji: {
+      fontSize: 22,
+    },
+    hintRowText: {
+      flex: 1,
+      gap: 2,
+    },
+    hintRowTitle: {
+      fontSize: 15,
+      color: colors.textPrimary,
+      ...typography.semibold,
+    },
+    hintRowDesc: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      ...typography.regular,
+    },
+    hintArrowBig: {
+      fontSize: 22,
+      ...typography.bold,
+    },
+    hintDismiss: {
+      width: '100%',
+      backgroundColor: colors.accent,
+      borderRadius: 16,
+      paddingVertical: 16,
+      alignItems: 'center',
+    },
+    hintDismissText: {
+      color: '#FFFFFF',
+      fontSize: 16,
+      ...typography.bold,
     },
   });

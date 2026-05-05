@@ -17,10 +17,10 @@ import {
     SwipeActionVisibility
 } from '@/types';
 import { buildInitialAchievements, checkAchievements, updateStreak } from '@/utils/achievements';
-import { calculateLevel } from '@/utils/levels';
 import { logAppError } from '@/utils/errorLogger';
 import { addAssetToFavoritesAlbum } from '@/utils/favoritesAlbum';
 import { groupByMonth } from '@/utils/groupByMonth';
+import { calculateLevel } from '@/utils/levels';
 import { fetchAllMediaItems } from '@/utils/mediaLibrary';
 import { clearOptimizedPreviewCache } from '@/utils/optimizedPreview';
 import { readPersistedStateFromDisk, writePersistedStateToDisk } from '@/utils/persistence';
@@ -157,6 +157,9 @@ export const usePhotoStore = create<AppState>((set, get) => ({
   theme: 'dark',
   activeSession: null,
   gamification: DEFAULT_GAMIFICATION_STATE,
+  swipeHintShown: false,
+  favoriteAlbums: [],
+  photoAlbumMap: {},
 
   hasMediaLibraryPermission: false,
   galleryLoadedAt: null,
@@ -221,7 +224,7 @@ export const usePhotoStore = create<AppState>((set, get) => ({
     const state = get();
     const month = state.getSessionById(monthId);
     const savedProgress = state.monthProgress[monthId] ?? 0;
-    
+
     let safeIndex = 0;
     if (month) {
       if (savedProgress >= month.items.length) {
@@ -306,7 +309,7 @@ export const usePhotoStore = create<AppState>((set, get) => ({
     try {
       // Удаляем все файлы одним вызовом
       const success = await MediaLibrary.deleteAssetsAsync(allIds);
-      
+
       if (success) {
         deletedIds = allIds;
       } else {
@@ -353,8 +356,8 @@ export const usePhotoStore = create<AppState>((set, get) => ({
         currentMonthId: activeMonth?.id ?? null,
         currentIndex: activeMonth
           ? (currentState.currentIndex >= (currentState.months.find(m => m.id === activeMonth.id)?.totalCount ?? 0)
-              ? activeMonth.items.length
-              : Math.min(currentState.currentIndex, Math.max(activeMonth.items.length - 1, 0)))
+            ? activeMonth.items.length
+            : Math.min(currentState.currentIndex, Math.max(activeMonth.items.length - 1, 0)))
           : 0,
         monthProgress: clampProgressByMonths(currentState.monthProgress, updatedMonths),
         activeSession: null,
@@ -394,6 +397,81 @@ export const usePhotoStore = create<AppState>((set, get) => ({
     set({ showSwipeButtons: show });
     void get().saveState();
   },
+  setSwipeHintShown: (shown: boolean) => {
+    set({ swipeHintShown: shown });
+    void get().saveState();
+  },
+
+  // ─── Альбомы в избранном ───────────────────────────────────────────────────
+
+  createFavoriteAlbum: (name: string) => {
+    const newAlbum: FavoriteAlbum = {
+      id: `album-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: name.trim(),
+      createdAt: Date.now(),
+    };
+    set((state) => ({
+      favoriteAlbums: [...state.favoriteAlbums, newAlbum],
+    }));
+    void get().saveState();
+    return newAlbum;
+  },
+
+  renameFavoriteAlbum: (albumId: string, name: string) => {
+    set((state) => ({
+      favoriteAlbums: state.favoriteAlbums.map((a) =>
+        a.id === albumId ? { ...a, name: name.trim() } : a
+      ),
+    }));
+    void get().saveState();
+  },
+
+  deleteFavoriteAlbum: (albumId: string) => {
+    set((state) => {
+      // Убираем привязку фото к удаляемому альбому
+      const newMap = { ...state.photoAlbumMap };
+      Object.keys(newMap).forEach((photoId) => {
+        if (newMap[photoId] === albumId) {
+          delete newMap[photoId];
+        }
+      });
+      return {
+        favoriteAlbums: state.favoriteAlbums.filter((a) => a.id !== albumId),
+        photoAlbumMap: newMap,
+      };
+    });
+    void get().saveState();
+  },
+
+  assignPhotosToAlbum: (photoIds: string[], albumId: string) => {
+    set((state) => {
+      const newMap = { ...state.photoAlbumMap };
+      photoIds.forEach((id) => { newMap[id] = albumId; });
+      // Обновляем обложку альбома первым фото если её нет
+      const album = state.favoriteAlbums.find((a) => a.id === albumId);
+      const updatedAlbums = album && !album.coverPhotoId
+        ? state.favoriteAlbums.map((a) =>
+            a.id === albumId ? { ...a, coverPhotoId: photoIds[0] } : a
+          )
+        : state.favoriteAlbums;
+      return { photoAlbumMap: newMap, favoriteAlbums: updatedAlbums };
+    });
+    void get().saveState();
+  },
+
+  removePhotosFromAlbum: (photoIds: string[]) => {
+    set((state) => {
+      const newMap = { ...state.photoAlbumMap };
+      photoIds.forEach((id) => { delete newMap[id]; });
+      return { photoAlbumMap: newMap };
+    });
+    void get().saveState();
+  },
+
+  getAlbumPhotos: (albumId: string) => {
+    const state = get();
+    return state.favorites.filter((item) => state.photoAlbumMap[item.id] === albumId);
+  },
   setTheme: (theme: AppTheme) => {
     set({ theme });
     void get().saveState();
@@ -421,7 +499,10 @@ export const usePhotoStore = create<AppState>((set, get) => ({
       reviewMode: state.reviewMode,
       swipeActionVisibility: state.swipeActionVisibility,
       showSwipeButtons: state.showSwipeButtons,
+      swipeHintShown: state.swipeHintShown,
       theme: state.theme,
+      favoriteAlbums: state.favoriteAlbums,
+      photoAlbumMap: state.photoAlbumMap,
       gamification: {
         enabled: state.gamification.enabled,
         achievements: state.gamification.achievements,
@@ -480,7 +561,10 @@ export const usePhotoStore = create<AppState>((set, get) => ({
       reviewMode: normalizeReviewMode(persisted.reviewMode),
       swipeActionVisibility: normalizeSwipeActionVisibility(persisted.swipeActionVisibility),
       showSwipeButtons: persisted.showSwipeButtons ?? true,
+      swipeHintShown: persisted.swipeHintShown ?? false,
       theme: (persisted.theme as AppTheme) ?? 'dark',
+      favoriteAlbums: persisted.favoriteAlbums ?? [],
+      photoAlbumMap: persisted.photoAlbumMap ?? {},
       activeSession: null,
       gamification: {
         ...DEFAULT_GAMIFICATION_STATE,

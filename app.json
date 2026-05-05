@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.ustimweb72.swipeshot",
-      "buildNumber": "1",
+      "buildNumber": "6",
       "supportsTablet": false,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "SwipeShot needs access to your media library to show and delete selected photos and videos.",

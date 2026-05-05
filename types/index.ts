@@ -34,6 +34,13 @@ export interface MonthSession {
   currentIndex: number;
 }
 
+export interface FavoriteAlbum {
+  id: string;
+  name: string;
+  createdAt: number;
+  coverPhotoId?: string;
+}
+
 export interface PersistedState {
   version: number;
   deletionQueue: string[];
@@ -45,7 +52,10 @@ export interface PersistedState {
   swipeActionVisibility?: Partial<SwipeActionVisibility>;
   showSwipeButtons?: boolean;
   theme?: AppTheme;
+  swipeHintShown?: boolean;
   gamification?: Partial<GamificationState>;
+  favoriteAlbums?: FavoriteAlbum[];
+  photoAlbumMap?: Record<string, string>; // photoId → albumId
   lastSync: number;
 }
 
@@ -133,6 +143,11 @@ export interface AppState {
   showSwipeButtons: boolean;
   theme: AppTheme;
   activeSession: MonthSession | null;
+  swipeHintShown: boolean;
+
+  // Альбомы в избранном
+  favoriteAlbums: FavoriteAlbum[];
+  photoAlbumMap: Record<string, string>; // photoId → albumId
 
   hasMediaLibraryPermission: boolean;
   galleryLoadedAt: number | null;
@@ -151,11 +166,20 @@ export interface AppState {
   setReviewMode: (reviewMode: ReviewMode) => void;
   setSwipeActionVisibility: (action: SwipeActionKey, visible: boolean) => void;
   setShowSwipeButtons: (show: boolean) => void;
+  setSwipeHintShown: (shown: boolean) => void;
   setTheme: (theme: AppTheme) => void;
   setActiveSession: (session: MonthSession | null) => void;
   getSessionById: (sessionId: string) => MonthSession | null;
   saveState: () => Promise<void>;
   loadState: () => Promise<void>;
+
+  // Альбомы в избранном
+  createFavoriteAlbum: (name: string) => FavoriteAlbum;
+  renameFavoriteAlbum: (albumId: string, name: string) => void;
+  deleteFavoriteAlbum: (albumId: string) => void;
+  assignPhotosToAlbum: (photoIds: string[], albumId: string) => void;
+  removePhotosFromAlbum: (photoIds: string[]) => void;
+  getAlbumPhotos: (albumId: string) => MediaItem[];
 
   // Геймификация
   gamification: GamificationState;

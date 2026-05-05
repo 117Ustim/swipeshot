@@ -1,15 +1,18 @@
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FlatList, Image, Pressable, StyleSheet, Text, View, Modal, Dimensions, Platform } from 'react-native';
+import {
+    Alert,
+    Dimensions,
+    FlatList,
+    Image,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    View,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withSpring, 
-  withTiming,
-  runOnJS
-} from 'react-native-reanimated';
 
 import { EmptyState } from '@/components/EmptyState';
 import { GradientBackground } from '@/components/GradientBackground';
@@ -18,21 +21,31 @@ import { typography } from '@/constants/typography';
 import { useFileSizeLoader } from '@/hooks/useFileSizeLoader';
 import { useI18n } from '@/hooks/useI18n';
 import { usePhotoStore } from '@/store/photoStore';
-import { MediaItem } from '@/types';
+import { FavoriteAlbum, MediaItem } from '@/types';
 import { formatFileSize } from '@/utils/formatFileSize';
 import { getCachedOptimizedPreviewUri, resolveOptimizedPreviewUri } from '@/utils/optimizedPreview';
 import { isUnsupportedMediaUri } from '@/utils/resolveMediaUri';
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_PADDING = 16;
 const ITEM_MARGIN = 2;
 const NUM_COLUMNS = 3;
 const ITEM_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - ITEM_MARGIN * 2 * NUM_COLUMNS) / NUM_COLUMNS;
 
-// Отдельный компонент для одного фото с резолвингом URI
-const FavoriteItem = ({ item, onRemove, onPress, styles }: {
+// ─── Компонент одного фото ────────────────────────────────────────────────────
+const FavoriteItem = ({
+  item,
+  isSelected,
+  isSelectionMode,
+  onPress,
+  onRemove,
+  styles,
+}: {
   item: MediaItem;
-  onRemove: (item: MediaItem) => void;
+  isSelected: boolean;
+  isSelectionMode: boolean;
   onPress: (item: MediaItem) => void;
+  onRemove: (item: MediaItem) => void;
   styles: ReturnType<typeof createStyles>;
 }) => {
   const [displayUri, setDisplayUri] = useState<string | null>(() => {
@@ -43,15 +56,16 @@ const FavoriteItem = ({ item, onRemove, onPress, styles }: {
   useEffect(() => {
     let isMounted = true;
     void resolveOptimizedPreviewUri(item, 'list').then((uri) => {
-      if (isMounted) {
-        setDisplayUri(isUnsupportedMediaUri(uri) ? null : uri);
-      }
+      if (isMounted) setDisplayUri(isUnsupportedMediaUri(uri) ? null : uri);
     });
     return () => { isMounted = false; };
   }, [item.id, item.uri]);
 
   return (
-    <Pressable style={styles.itemContainer} onPress={() => onPress(item)}>
+    <Pressable
+      style={[styles.itemContainer, isSelected && styles.itemSelected]}
+      onPress={() => onPress(item)}
+    >
       {displayUri ? (
         <Image source={{ uri: displayUri }} style={styles.thumbnail} resizeMode="cover" />
       ) : (
@@ -62,242 +76,422 @@ const FavoriteItem = ({ item, onRemove, onPress, styles }: {
           <Feather name="play" size={12} color="#fff" />
         </View>
       )}
-      <Pressable style={styles.removeButton} onPress={() => onRemove(item)} hitSlop={8}>
-        <Feather name="x" size={14} color="#fff" />
-      </Pressable>
+      {isSelectionMode ? (
+        <View style={[styles.checkCircle, isSelected && styles.checkCircleSelected]}>
+          {isSelected && <Feather name="check" size={12} color="#fff" />}
+        </View>
+      ) : (
+        <Pressable style={styles.removeButton} onPress={() => onRemove(item)} hitSlop={8}>
+          <Feather name="x" size={14} color="#fff" />
+        </Pressable>
+      )}
     </Pressable>
   );
 };
 
+// ─── Компонент карточки альбома ───────────────────────────────────────────────
+const AlbumCard = ({
+  album,
+  coverItem,
+  photoCount,
+  onPress,
+  styles,
+}: {
+  album: FavoriteAlbum;
+  coverItem: MediaItem | null;
+  photoCount: number;
+  onPress: (album: FavoriteAlbum) => void;
+  styles: ReturnType<typeof createStyles>;
+}) => {
+  const [coverUri, setCoverUri] = useState<string | null>(() => {
+    if (!coverItem) return null;
+    const cached = getCachedOptimizedPreviewUri(coverItem, 'list');
+    return isUnsupportedMediaUri(cached) ? null : cached;
+  });
+
+  useEffect(() => {
+    if (!coverItem) { setCoverUri(null); return; }
+    let isMounted = true;
+    void resolveOptimizedPreviewUri(coverItem, 'list').then((uri) => {
+      if (isMounted) setCoverUri(isUnsupportedMediaUri(uri) ? null : uri);
+    });
+    return () => { isMounted = false; };
+  }, [coverItem?.id, coverItem?.uri]);
+
+  return (
+    <Pressable style={styles.albumCard} onPress={() => onPress(album)}>
+      <View style={styles.albumCover}>
+        {coverUri ? (
+          <Image source={{ uri: coverUri }} style={styles.albumCoverImage} resizeMode="cover" />
+        ) : (
+          <View style={styles.albumCoverFallback}>
+            <Feather name="image" size={28} color="rgba(255,255,255,0.4)" />
+          </View>
+        )}
+      </View>
+      <Text style={styles.albumName} numberOfLines={1}>{album.name}</Text>
+      <Text style={styles.albumCount}>{photoCount}</Text>
+    </Pressable>
+  );
+};
+
+// ─── Главный экран ────────────────────────────────────────────────────────────
 export default function FavoritesScreen() {
   const colors = useAppTheme();
   const { t } = useI18n();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const favorites = usePhotoStore((state) => state.favorites);
+  const favoriteAlbums = usePhotoStore((state) => state.favoriteAlbums);
+  const photoAlbumMap = usePhotoStore((state) => state.photoAlbumMap);
   const removeFromFavorites = usePhotoStore((state) => state.removeFromFavorites);
-  const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
+  const createFavoriteAlbum = usePhotoStore((state) => state.createFavoriteAlbum);
+  const assignPhotosToAlbum = usePhotoStore((state) => state.assignPhotosToAlbum);
+  const getAlbumPhotos = usePhotoStore((state) => state.getAlbumPhotos);
 
-  // Загружаем размеры файлов по требованию
   useFileSizeLoader(favorites);
 
-  // Общий размер избранных файлов
+  // Вкладки
+  const [activeTab, setActiveTab] = useState<'all' | 'albums'>('all');
+
+  // Selection mode
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Создание альбома
+  const [showCreateAlbum, setShowCreateAlbum] = useState(false);
+  const [newAlbumName, setNewAlbumName] = useState('');
+
   const totalSize = useMemo(
     () => favorites.reduce((sum, item) => sum + (item.fileSize ?? 0), 0),
     [favorites]
   );
 
-  const handleRemove = useCallback(
-    (item: MediaItem) => {
-      removeFromFavorites(item.id);
-    },
-    [removeFromFavorites]
-  );
+  // Обложки альбомов — передаём MediaItem для корректного резолвинга URI
+  const albumCoverItems = useMemo(() => {
+    const map: Record<string, MediaItem | null> = {};
+    favoriteAlbums.forEach((album) => {
+      const photos = getAlbumPhotos(album.id);
+      map[album.id] = photos[0] ?? null;
+    });
+    return map;
+  }, [favoriteAlbums, getAlbumPhotos, photoAlbumMap]);
 
-  const handlePress = useCallback((item: MediaItem) => {
-    setSelectedItem(item);
+  const albumPhotoCounts = useMemo(() => {
+    const map: Record<string, number> = {};
+    favoriteAlbums.forEach((album) => {
+      map[album.id] = getAlbumPhotos(album.id).length;
+    });
+    return map;
+  }, [favoriteAlbums, getAlbumPhotos, photoAlbumMap]);
+
+  // ─── Handlers ──────────────────────────────────────────────────────────────
+
+  const handleRemove = useCallback((item: MediaItem) => {
+    removeFromFavorites(item.id);
+  }, [removeFromFavorites]);
+
+  const handlePhotoPress = useCallback((item: MediaItem) => {
+    if (!isSelectionMode) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(item.id)) { next.delete(item.id); } else { next.add(item.id); }
+      return next;
+    });
+  }, [isSelectionMode]);
+
+  const enterSelectionMode = useCallback(() => {
+    setIsSelectionMode(true);
+    setSelectedIds(new Set());
   }, []);
 
-  const renderItem = useCallback(
+  const exitSelectionMode = useCallback(() => {
+    setIsSelectionMode(false);
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleAlbumPress = useCallback((album: FavoriteAlbum) => {
+    router.push({ pathname: '/album/[albumId]', params: { albumId: album.id } });
+  }, [router]);
+
+  const handleCreateAlbum = useCallback(() => {
+    const name = newAlbumName.trim();
+    if (!name) return;
+    const album = createFavoriteAlbum(name);
+    // Если есть выбранные фото — сразу добавляем в новый альбом
+    if (selectedIds.size > 0) {
+      assignPhotosToAlbum(Array.from(selectedIds), album.id);
+      exitSelectionMode();
+    }
+    setNewAlbumName('');
+    setShowCreateAlbum(false);
+    setActiveTab('albums');
+  }, [newAlbumName, createFavoriteAlbum, selectedIds, assignPhotosToAlbum, exitSelectionMode]);
+
+  const handleMoveToAlbum = useCallback(() => {
+    if (selectedIds.size === 0) return;
+    if (favoriteAlbums.length === 0) {
+      // Нет альбомов — предлагаем создать
+      setShowCreateAlbum(true);
+      return;
+    }
+    Alert.alert(
+      t('albums.selectAlbum'),
+      undefined,
+      [
+        ...favoriteAlbums.map((album) => ({
+          text: album.name,
+          onPress: () => {
+            assignPhotosToAlbum(Array.from(selectedIds), album.id);
+            exitSelectionMode();
+          },
+        })),
+        {
+          text: t('albums.newAlbum').replace('+ ', ''),
+          onPress: () => setShowCreateAlbum(true),
+        },
+        { text: t('albums.deleteCancel'), style: 'cancel' as const },
+      ]
+    );
+  }, [selectedIds, favoriteAlbums, assignPhotosToAlbum, exitSelectionMode, t]);
+
+  // ─── Render items ───────────────────────────────────────────────────────────
+
+  const renderPhoto = useCallback(
     ({ item }: { item: MediaItem }) => (
-      <FavoriteItem item={item} onRemove={handleRemove} onPress={handlePress} styles={styles} />
+      <FavoriteItem
+        item={item}
+        isSelected={selectedIds.has(item.id)}
+        isSelectionMode={isSelectionMode}
+        onPress={handlePhotoPress}
+        onRemove={handleRemove}
+        styles={styles}
+      />
     ),
-    [handleRemove, handlePress, styles]
+    [selectedIds, isSelectionMode, handlePhotoPress, handleRemove, styles]
   );
 
-  const keyExtractor = useCallback((item: MediaItem) => item.id, []);
+  const renderAlbum = useCallback(
+    ({ item }: { item: FavoriteAlbum }) => (
+      <AlbumCard
+        album={item}
+        coverItem={albumCoverItems[item.id] ?? null}
+        photoCount={albumPhotoCounts[item.id] ?? 0}
+        onPress={handleAlbumPress}
+        styles={styles}
+      />
+    ),
+    [albumCoverItems, albumPhotoCounts, handleAlbumPress, styles]
+  );
+
+  const keyExtractor = useCallback((item: MediaItem | FavoriteAlbum) => item.id, []);
 
   return (
     <GradientBackground>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.container}>
-          <Text style={styles.title}>{t('favorites.title')}</Text>
+      <View style={{ flex: 1 }}>
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.container}>
 
-          {favorites.length > 0 && (
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryText}>
-                {t('favorites.summaryFiles', { count: favorites.length })}
+          {/* Заголовок */}
+          <View style={styles.headerRow}>
+            <Text style={styles.title}>{t('favorites.title')}</Text>
+            {activeTab === 'all' && !isSelectionMode && favorites.length > 0 && (
+              <Pressable onPress={enterSelectionMode} style={styles.selectBtn} hitSlop={8}>
+                <Text style={styles.selectBtnText}>{t('albums.selectMode')}</Text>
+              </Pressable>
+            )}
+            {isSelectionMode && (
+              <Pressable onPress={exitSelectionMode} style={styles.selectBtn} hitSlop={8}>
+                <Text style={styles.selectBtnText}>{t('albums.selectDone')}</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Вкладки */}
+          <View style={styles.tabs}>
+            <Pressable
+              style={[styles.tab, activeTab === 'all' && styles.tabActive]}
+              onPress={() => { setActiveTab('all'); exitSelectionMode(); }}
+            >
+              <Text style={[styles.tabText, activeTab === 'all' && styles.tabTextActive]}>
+                {t('albums.tabAll')}
               </Text>
-              <Text style={styles.summaryText}>
-                {t('favorites.summarySize', { size: formatFileSize(totalSize) })}
+            </Pressable>
+            <Pressable
+              style={[styles.tab, activeTab === 'albums' && styles.tabActive]}
+              onPress={() => { setActiveTab('albums'); exitSelectionMode(); }}
+            >
+              <Text style={[styles.tabText, activeTab === 'albums' && styles.tabTextActive]}>
+                {t('albums.tabAlbums')}
               </Text>
-            </View>
-          )}
+            </Pressable>
+          </View>
 
-          {favorites.length === 0 ? (
-            <EmptyState
-              title={t('favorites.emptyTitle')}
-              subtitle={t('favorites.emptySubtitle')}
-            />
-          ) : (
-            <FlatList
-              data={favorites}
-              keyExtractor={keyExtractor}
-              renderItem={renderItem}
-              numColumns={NUM_COLUMNS}
-              contentContainerStyle={styles.listContent}
-              showsVerticalScrollIndicator={false}
-            />
-          )}
-
-          <Modal
-            visible={!!selectedItem}
-            transparent={true}
-            animationType="fade"
-            onRequestClose={() => setSelectedItem(null)}
-          >
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <View style={styles.modalOverlay}>
-                <View style={[styles.modalContent, { paddingTop: insets.top }]}>
-                  <View style={styles.modalHeader}>
-                  <Pressable style={styles.closeButton} onPress={() => setSelectedItem(null)}>
-                    <Feather name="x" size={28} color="#fff" />
-                  </Pressable>
-                </View>
-                
-                <View style={styles.modalImageContainer}>
-                  {selectedItem && (
-                    <FullResolutionImage item={selectedItem} styles={styles} />
-                  )}
-                </View>
-
-                <View style={[styles.modalFooter, { paddingBottom: Math.max(insets.bottom, 20) }]}>
-                  <Text style={styles.modalFilename} numberOfLines={1}>
-                    {selectedItem?.filename}
+          {/* ── Вкладка "Все фото" ── */}
+          {activeTab === 'all' && (
+            <>
+              {favorites.length > 0 && (
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryText}>
+                    {t('favorites.summaryFiles', { count: favorites.length })}
                   </Text>
-                  <Text style={styles.modalMeta}>
-                    {selectedItem ? formatFileSize(selectedItem.fileSize) : ''}
+                  <Text style={styles.summaryText}>
+                    {t('favorites.summarySize', { size: formatFileSize(totalSize) })}
                   </Text>
                 </View>
+              )}
+              {favorites.length === 0 ? (
+                <EmptyState title={t('favorites.emptyTitle')} subtitle={t('favorites.emptySubtitle')} />
+              ) : (
+                <FlatList
+                  data={favorites}
+                  keyExtractor={keyExtractor}
+                  renderItem={renderPhoto}
+                  numColumns={NUM_COLUMNS}
+                  contentContainerStyle={[
+                    styles.listContent,
+                    isSelectionMode && selectedIds.size > 0 && styles.listContentWithBar,
+                  ]}
+                  showsVerticalScrollIndicator={false}
+                />
+              )}
+            </>
+          )}
+
+          {/* ── Вкладка "Альбомы" ── */}
+          {activeTab === 'albums' && (
+            <>
+              <Pressable style={styles.newAlbumBtn} onPress={() => setShowCreateAlbum(true)}>
+                <Text style={styles.newAlbumBtnText}>{t('albums.newAlbum')}</Text>
+              </Pressable>
+              {favoriteAlbums.length === 0 ? (
+                <EmptyState title={t('albums.emptyTitle')} subtitle={t('albums.emptySubtitle')} />
+              ) : (
+                <FlatList
+                  data={favoriteAlbums}
+                  keyExtractor={keyExtractor}
+                  renderItem={renderAlbum}
+                  numColumns={2}
+                  contentContainerStyle={styles.albumsListContent}
+                  showsVerticalScrollIndicator={false}
+                />
+              )}
+            </>
+          )}
+          </View>
+        </SafeAreaView>
+
+        {/* ── Нижняя панель selection mode — вне SafeAreaView ── */}
+        {isSelectionMode && selectedIds.size > 0 && (
+          <View style={[styles.selectionBar, { paddingBottom: insets.bottom + 80 }]}>
+            <Text style={styles.selectionCount}>
+              {t('albums.selectedCount', { count: selectedIds.size })}
+            </Text>
+            <Pressable style={styles.selectionAction} onPress={handleMoveToAlbum}>
+              <Feather name="folder-plus" size={18} color={colors.accent} />
+              <Text style={[styles.selectionActionText, { color: colors.accent }]}>
+                {t('albums.moveToAlbum')}
+              </Text>
+            </Pressable>
+          </View>
+        )}
+
+        {/* ── Модалка создания альбома ── */}
+        {showCreateAlbum && (
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>{t('albums.createTitle')}</Text>
+              <TextInput
+                style={styles.modalInput}
+                placeholder={t('albums.createPlaceholder')}
+                placeholderTextColor={colors.textSecondary}
+                value={newAlbumName}
+                onChangeText={setNewAlbumName}
+                autoFocus
+                returnKeyType="done"
+                onSubmitEditing={handleCreateAlbum}
+              />
+              <View style={styles.modalActions}>
+                <Pressable
+                  style={styles.modalCancel}
+                  onPress={() => { setShowCreateAlbum(false); setNewAlbumName(''); }}
+                >
+                  <Text style={styles.modalCancelText}>{t('albums.deleteCancel')}</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalConfirm, !newAlbumName.trim() && styles.modalConfirmDisabled]}
+                  onPress={handleCreateAlbum}
+                  disabled={!newAlbumName.trim()}
+                >
+                  <Text style={styles.modalConfirmText}>{t('albums.createConfirm')}</Text>
+                </Pressable>
               </View>
             </View>
-            </GestureHandlerRootView>
-          </Modal>
-        </View>
-      </SafeAreaView>
+          </View>
+        )}
+      </View>
     </GradientBackground>
   );
 }
 
-const FullResolutionImage = ({ item, styles }: { item: MediaItem; styles: any }) => {
-  const [uri, setUri] = useState<string | null>(null);
-  
-  const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
-  const translateX = useSharedValue(0);
-  const translateY = useSharedValue(0);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
-
-  useEffect(() => {
-    let isMounted = true;
-    resolveOptimizedPreviewUri(item, 'card').then(resolvedUri => {
-      if (isMounted) setUri(resolvedUri);
-    });
-    // Reset zoom when item changes
-    scale.value = 1;
-    savedScale.value = 1;
-    translateX.value = 0;
-    translateY.value = 0;
-    savedTranslateX.value = 0;
-    savedTranslateY.value = 0;
-    
-    return () => { isMounted = false; };
-  }, [item]);
-
-  const pinchGesture = Gesture.Pinch()
-    .onUpdate((event) => {
-      scale.value = savedScale.value * event.scale;
-    })
-    .onEnd(() => {
-      if (scale.value < 1) {
-        scale.value = withSpring(1);
-        savedScale.value = 1;
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
-      } else {
-        savedScale.value = scale.value;
-      }
-    });
-
-  const panGesture = Gesture.Pan()
-    .onUpdate((event) => {
-      if (scale.value > 1) {
-        translateX.value = savedTranslateX.value + event.translationX;
-        translateY.value = savedTranslateY.value + event.translationY;
-      }
-    })
-    .onEnd(() => {
-      if (scale.value > 1) {
-        savedTranslateX.value = translateX.value;
-        savedTranslateY.value = translateY.value;
-      } else {
-        translateX.value = withSpring(0);
-        translateY.value = withSpring(0);
-        savedTranslateX.value = 0;
-        savedTranslateY.value = 0;
-      }
-    });
-
-  const doubleTapGesture = Gesture.Tap()
-    .numberOfTaps(2)
-    .onEnd(() => {
-      scale.value = withSpring(1);
-      savedScale.value = 1;
-      translateX.value = withSpring(0);
-      translateY.value = withSpring(0);
-      savedTranslateX.value = 0;
-      savedTranslateY.value = 0;
-    });
-
-  const composedGesture = Gesture.Simultaneous(
-    pinchGesture, 
-    Gesture.Race(panGesture, doubleTapGesture)
-  );
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
-
-  if (!uri) return null;
-
-  return (
-    <GestureDetector gesture={composedGesture}>
-      <Animated.Image 
-        source={{ uri }} 
-        style={[styles.fullImage, animatedStyle]} 
-        resizeMode="contain" 
-      />
-    </GestureDetector>
-  );
-};
-
 const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
   StyleSheet.create({
-    safeArea: {
-      flex: 1,
-      backgroundColor: 'transparent',
-    },
-    container: {
-      flex: 1,
-      backgroundColor: 'transparent',
-      paddingHorizontal: 16,
-      paddingTop: 2,
+    safeArea: { flex: 1, backgroundColor: 'transparent', position: 'relative' },
+    container: { flex: 1, paddingHorizontal: 16, paddingTop: 2, paddingBottom: 0 },
+    headerRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 12,
     },
     title: {
       color: colors.textSecondary,
       fontSize: 18,
       ...typography.semibold,
-      textAlign: 'center',
-      marginBottom: 10,
     },
+    selectBtn: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      backgroundColor: colors.surfaceElevated,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    selectBtnText: {
+      color: colors.accent,
+      fontSize: 13,
+      ...typography.semibold,
+    },
+    // Вкладки
+    tabs: {
+      flexDirection: 'row',
+      backgroundColor: colors.surfaceElevated,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: 3,
+      marginBottom: 12,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: 7,
+      alignItems: 'center',
+      borderRadius: 10,
+    },
+    tabActive: {
+      backgroundColor: colors.accent,
+    },
+    tabText: {
+      fontSize: 13,
+      color: colors.textSecondary,
+      ...typography.semibold,
+    },
+    tabTextActive: {
+      color: '#fff',
+    },
+    // Сводка
     summaryRow: {
       flexDirection: 'row',
       justifyContent: 'space-between',
@@ -314,9 +508,9 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
       fontSize: 13,
       ...typography.regular,
     },
-    listContent: {
-      paddingBottom: 100,
-    },
+    listContent: { paddingBottom: 120 },
+    listContentWithBar: { paddingBottom: 200 },
+    // Фото
     itemContainer: {
       width: ITEM_WIDTH,
       margin: ITEM_MARGIN,
@@ -325,13 +519,13 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
       overflow: 'hidden',
       backgroundColor: colors.surface,
     },
-    thumbnail: {
-      width: '100%',
-      height: '100%',
+    itemSelected: {
+      opacity: 0.7,
+      borderWidth: 2,
+      borderColor: colors.accent,
     },
-    thumbnailFallback: {
-      backgroundColor: colors.surface,
-    },
+    thumbnail: { width: '100%', height: '100%' },
+    thumbnailFallback: { backgroundColor: colors.surface },
     videoBadge: {
       position: 'absolute',
       bottom: 6,
@@ -349,51 +543,177 @@ const createStyles = (colors: ReturnType<typeof useAppTheme>) =>
       padding: 3,
       zIndex: 10,
     },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0, 0, 0, 0.95)',
-    },
-    modalContent: {
-      flex: 1,
-    },
-    modalHeader: {
-      height: 70,
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
+    checkCircle: {
+      position: 'absolute',
+      top: 6,
+      right: 6,
+      width: 22,
+      height: 22,
+      borderRadius: 11,
+      borderWidth: 2,
+      borderColor: '#fff',
+      backgroundColor: 'rgba(0,0,0,0.3)',
       alignItems: 'center',
+      justifyContent: 'center',
+    },
+    checkCircleSelected: {
+      backgroundColor: colors.accent,
+      borderColor: colors.accent,
+    },
+    // Альбомы
+    newAlbumBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      paddingHorizontal: 14,
+      backgroundColor: colors.surfaceElevated,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 12,
+      alignSelf: 'flex-start',
+    },
+    newAlbumBtnText: {
+      color: colors.accent,
+      fontSize: 14,
+      ...typography.semibold,
+    },
+    albumsListContent: { paddingBottom: 120 },
+    albumCard: {
+      flex: 1,
+      margin: 6,
+      maxWidth: '50%',
+    },
+    albumCover: {
+      aspectRatio: 1,
+      borderRadius: 14,
+      overflow: 'hidden',
+      backgroundColor: colors.surfaceElevated,
+      borderWidth: 1,
+      borderColor: colors.border,
+      marginBottom: 6,
+    },
+    albumCoverImage: { width: '100%', height: '100%' },
+    albumCoverFallback: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+    },
+    albumName: {
+      color: colors.textPrimary,
+      fontSize: 14,
+      ...typography.semibold,
+      marginBottom: 2,
+    },
+    albumCount: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      ...typography.regular,
+    },
+    // Selection bar
+    selectionBar: {
+      position: 'absolute',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      zIndex: 50,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: colors.surfaceElevated,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
       paddingHorizontal: 20,
+      paddingVertical: 14,
+      paddingBottom: 28,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: -4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      elevation: 10,
+    },
+    selectionCount: {
+      color: colors.textPrimary,
+      fontSize: 15,
+      ...typography.semibold,
+    },
+    selectionAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    selectionActionText: {
+      fontSize: 15,
+      ...typography.semibold,
+    },
+    // Модалка создания альбома
+    modalOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingHorizontal: 24,
       zIndex: 100,
     },
-    closeButton: {
-      width: 44,
-      height: 44,
-      borderRadius: 22,
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    modalImageContainer: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    fullImage: {
+    modalCard: {
       width: '100%',
-      height: '100%',
-    },
-    modalFooter: {
+      backgroundColor: colors.isDark ? '#1C2B3A' : '#fff',
+      borderRadius: 20,
       padding: 24,
-      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
     },
-    modalFilename: {
-      color: '#fff',
-      fontSize: 16,
-      ...typography.semibold,
-      marginBottom: 4,
+    modalTitle: {
+      color: colors.textPrimary,
+      fontSize: 18,
+      ...typography.bold,
+      marginBottom: 16,
     },
-    modalMeta: {
-      color: 'rgba(255, 255, 255, 0.6)',
-      fontSize: 14,
+    modalInput: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      color: colors.textPrimary,
+      fontSize: 15,
       ...typography.regular,
+      marginBottom: 16,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    modalCancel: {
+      flex: 1,
+      paddingVertical: 12,
+      alignItems: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalCancelText: {
+      color: colors.textSecondary,
+      fontSize: 15,
+      ...typography.semibold,
+    },
+    modalConfirm: {
+      flex: 1,
+      paddingVertical: 12,
+      alignItems: 'center',
+      backgroundColor: colors.accent,
+      borderRadius: 12,
+    },
+    modalConfirmDisabled: {
+      opacity: 0.4,
+    },
+    modalConfirmText: {
+      color: '#fff',
+      fontSize: 15,
+      ...typography.semibold,
     },
   });

@@ -9,10 +9,10 @@ import { useEffect } from 'react';
 import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { AchievementToast } from '@/components/AchievementToast';
 import { typography } from '@/constants/typography';
 import { useI18n } from '@/hooks/useI18n';
 import { usePhotoStore } from '@/store/photoStore';
-import { AchievementToast } from '@/components/AchievementToast';
 
 export {
     ErrorBoundary
@@ -69,6 +69,7 @@ function RootLayoutNav() {
           />
           <Stack.Screen name="confirmation/[monthId]" options={{ headerShown: false }} />
           <Stack.Screen name="duplicates" options={{ headerShown: false }} />
+          <Stack.Screen name="album/[albumId]" options={{ headerShown: false }} />
         </Stack>
         <AchievementToastWrapper />
       </ThemeProvider>
